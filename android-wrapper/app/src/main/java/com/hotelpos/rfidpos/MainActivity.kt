@@ -23,7 +23,7 @@ class MainActivity : AppCompatActivity() {
     private var pendingIntent: PendingIntent? = null
 
     // Target URL - Change this to your production URL when deploying
-    private val targetUrl = "https://rfidpos.vercel.app/"
+    private val targetUrl = "https://rfidpos.vercel.app/login"
 
     // Broadcast receiver for specific hand-held terminals (Sunmi, iMin, etc.)
     private val rfidBroadcastReceiver = object : BroadcastReceiver() {
