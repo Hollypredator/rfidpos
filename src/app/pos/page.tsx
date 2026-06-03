@@ -868,7 +868,7 @@ export default function POSPage() {
       )}
 
       {/* 3. SIMULATOR PANEL (Bottom section to seed & check local IndexedDB) */}
-      <footer className="max-w-[1600px] mx-auto w-full px-4 mt-8 pt-8 border-t border-border">
+      <footer className="hidden md:block max-w-[1600px] mx-auto w-full px-4 mt-8 pt-8 border-t border-border">
         <div className="bg-card border border-border rounded-2xl p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
                     <p className="text-xs text-muted leading-relaxed mb-4">
@@ -1171,7 +1171,7 @@ export default function POSPage() {
 
             {/* Test Simulation trigger options inside modal */}
             {paymentStatus === 'scanning' && (
-              <div className="mt-6 border-t border-border/80 pt-4 text-center">
+              <div className="hidden md:block mt-6 border-t border-border/80 pt-4 text-center">
                 <p className="text-[10px] text-muted font-bold uppercase tracking-wider mb-2">Simülatör RFID Kart Dokunuşu:</p>
                 <div className="flex flex-wrap justify-center gap-1.5">
                   {localGuests.length === 0 ? (
