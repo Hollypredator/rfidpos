@@ -11,7 +11,6 @@ import {
   Users,
   Building2,
   Zap,
-  Globe,
   ChevronRight,
   CheckCircle,
   ArrowRight,
@@ -252,27 +251,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA ─────────────────────────────── */}
-      <section style={{ padding: '80px 24px' }}>
-        <div style={{
-          maxWidth: 700, margin: '0 auto', textAlign: 'center',
-          background: 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(16,185,129,0.05))',
-          border: '1px solid rgba(99,102,241,0.2)',
-          borderRadius: 20, padding: '48px 32px',
-        }}>
-          <Globe size={40} style={{ color: 'var(--accent)', marginBottom: 16 }} />
-          <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12 }}>
-            Hemen Başlayın
-          </h2>
-          <p style={{ fontSize: 15, color: 'var(--muted)', marginBottom: 28, maxWidth: 450, margin: '0 auto 28px' }}>
-            Dakikalar içinde otelinizi kaydedin, odaları tanımlayın ve RFID kartlarla ödeme almaya başlayın.
-          </p>
-          <a href="/register" className="btn btn-primary btn-lg" style={{ gap: 10 }}>
-            Ücretsiz Otel Kaydı
-            <ArrowRight size={18} />
-          </a>
-        </div>
-      </section>
 
       {/* ── Footer ──────────────────────────── */}
       <footer style={{
