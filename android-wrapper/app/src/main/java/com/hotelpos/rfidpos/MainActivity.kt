@@ -23,8 +23,7 @@ class MainActivity : AppCompatActivity() {
     private var pendingIntent: PendingIntent? = null
 
     // Target URL - Change this to your production URL when deploying
-    private val targetUrl = "http://10.0.2.2:3000" // For Android Emulator (maps to localhost:3000)
-    // private val targetUrl = "https://your-production-url.com"
+    private val targetUrl = "https://rfidpos.vercel.app/"
 
     // Broadcast receiver for specific hand-held terminals (Sunmi, iMin, etc.)
     private val rfidBroadcastReceiver = object : BroadcastReceiver() {
