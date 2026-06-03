@@ -183,14 +183,6 @@ function LoginContent() {
             </button>
             <button 
               type="button"
-              onClick={() => { setEmail('super@hotelpos.com'); setPassword('demo1234'); }}
-              className="btn btn-ghost"
-              style={{ justifyContent: 'flex-start', padding: '6px 10px', fontSize: 11, width: '100%', border: '1px solid var(--border)' }}
-            >
-              🔑 super@hotelpos.com (Süper Admin)
-            </button>
-            <button 
-              type="button"
               onClick={() => { setEmail('waiter@hotelpos.com'); setPassword('demo1234'); }}
               className="btn btn-ghost"
               style={{ justifyContent: 'flex-start', padding: '6px 10px', fontSize: 11, width: '100%', border: '1px solid var(--border)' }}

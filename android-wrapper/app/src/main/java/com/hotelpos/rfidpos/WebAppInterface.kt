@@ -8,7 +8,10 @@ import android.provider.Settings
 import android.webkit.JavascriptInterface
 import android.widget.Toast
 
-class WebAppInterface(private val context: Context) {
+import android.print.PrintManager
+import android.webkit.WebView
+
+class WebAppInterface(private val context: Context, private val webView: WebView) {
 
     /**
      * Show a native Android toast message.
@@ -47,5 +50,31 @@ class WebAppInterface(private val context: Context) {
     @JavascriptInterface
     fun getDeviceHardwareId(): String {
         return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown_device_id"
+    }
+
+    /**
+     * Print the current WebView contents.
+     */
+    @JavascriptInterface
+    fun printPage() {
+        webView.post {
+            try {
+                val printManager = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+                if (printManager != null) {
+                    val jobName = "RFIDPOS Receipt"
+                    val printAdapter = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        webView.createPrintDocumentAdapter(jobName)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        webView.createPrintDocumentAdapter()
+                    }
+                    printManager.print(jobName, printAdapter, android.print.PrintAttributes.Builder().build())
+                } else {
+                    Toast.makeText(context, "Yazdırma servisi bulunamadı", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Yazdırma hatası: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 }

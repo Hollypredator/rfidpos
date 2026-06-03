@@ -23,6 +23,7 @@ export default function GuestsPage() {
   const [formCardUid, setFormCardUid] = useState('');
   const [formRoomId, setFormRoomId] = useState('');
   const [formStatus, setFormStatus] = useState<'active' | 'inactive'>('active');
+  const [formPinCode, setFormPinCode] = useState('1234');
   const [formSaving, setFormSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -41,7 +42,7 @@ export default function GuestsPage() {
     if (roomIds.length > 0) {
       const { data: guestsData } = await supabase
         .from('guests')
-        .select('*, room:rooms(room_number, wallet_balance)')
+        .select('*, room:rooms(room_number, wallet_balance, pin_code)')
         .in('room_id', roomIds)
         .order('guest_name');
       setGuests(guestsData || []);
@@ -73,6 +74,7 @@ export default function GuestsPage() {
         setFormCardUid(scanUid);
         setFormRoomId(rooms[0]?.id || '');
         setFormStatus('active');
+        setFormPinCode(rooms[0]?.pin_code || '1234');
         setFormError(null);
         setShowModal(true);
 
@@ -87,8 +89,10 @@ export default function GuestsPage() {
     setEditingGuest(null);
     setFormName('');
     setFormCardUid('');
-    setFormRoomId(rooms[0]?.id || '');
+    const defaultRoom = rooms[0];
+    setFormRoomId(defaultRoom?.id || '');
     setFormStatus('active');
+    setFormPinCode(defaultRoom?.pin_code || '1234');
     setFormError(null);
     setShowModal(true);
   };
@@ -99,6 +103,7 @@ export default function GuestsPage() {
     setFormCardUid(guest.card_uid);
     setFormRoomId(guest.room_id);
     setFormStatus(guest.status);
+    setFormPinCode((guest as any).room?.pin_code || '1234');
     setFormError(null);
     setShowModal(true);
   };
@@ -108,10 +113,22 @@ export default function GuestsPage() {
       setFormError('Tüm alanlar zorunludur.');
       return;
     }
+    if (!/^[0-9]{4}$/.test(formPinCode)) {
+      setFormError('PIN kodu 4 haneli rakam olmalıdır.');
+      return;
+    }
     setFormSaving(true);
     setFormError(null);
 
     try {
+      // 1. Karta atanan odanın şifresini ve durumunu güncelle
+      const { error: roomError } = await supabase
+        .from('rooms')
+        .update({ pin_code: formPinCode, status: 'occupied' })
+        .eq('id', formRoomId);
+      if (roomError) throw roomError;
+
+      // 2. Misafir kaydını yap
       if (editingGuest) {
         const { error } = await supabase
           .from('guests')
@@ -298,11 +315,35 @@ export default function GuestsPage() {
               </div>
               <div>
                 <label className="input-label">Oda</label>
-                <select className="input" value={formRoomId} onChange={(e) => setFormRoomId(e.target.value)}>
+                <select 
+                  className="input" 
+                  value={formRoomId} 
+                  onChange={(e) => {
+                    const rId = e.target.value;
+                    setFormRoomId(rId);
+                    const selectedRoom = rooms.find(r => r.id === rId);
+                    if (selectedRoom) {
+                      setFormPinCode(selectedRoom.pin_code || '1234');
+                    }
+                  }}
+                >
                   {rooms.map(r => (
                     <option key={r.id} value={r.id}>Oda {r.room_number}</option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="input-label">Kart PIN Kodu (4 Hane)</label>
+                <input 
+                  className="input" 
+                  maxLength={4}
+                  placeholder="1234" 
+                  value={formPinCode} 
+                  onChange={(e) => setFormPinCode(e.target.value.replace(/\D/g, '').slice(0, 4))} 
+                />
+                <span style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, display: 'block' }}>
+                  Kayıtlı kartın POS cihazlarında harcama yaparken kullanacağı 4 haneli güvenlik şifresidir.
+                </span>
               </div>
               <div>
                 <label className="input-label">Durum</label>

@@ -98,7 +98,7 @@ class MainActivity : AppCompatActivity() {
         webView.webChromeClient = WebChromeClient()
 
         // Inject JS Bridge
-        webView.addJavascriptInterface(WebAppInterface(this), "AndroidBridge")
+        webView.addJavascriptInterface(WebAppInterface(this, webView), "AndroidBridge")
 
         // Load application URL
         webView.loadUrl(targetUrl)

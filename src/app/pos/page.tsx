@@ -30,8 +30,10 @@ import {
   Sun,
   Moon,
   Settings,
-  Edit
+  Edit,
+  Printer
 } from 'lucide-react';
+import { createClient } from '../../utils/supabase';
 import { OfflineDBService } from '../../services/db';
 import { useSync } from '../../hooks/useSync';
 import { Room, Guest, Transaction } from '../../types';
@@ -84,6 +86,33 @@ export default function POSPage() {
     }
   }, [profile, router]);
 
+  useEffect(() => {
+    if (profile) {
+      setActiveStaff(profile);
+    }
+  }, [profile]);
+
+  const fetchStaffList = async () => {
+    if (!tenantId || tenantId === 'mock-tenant-id') return;
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true);
+      if (!error && data) {
+        setStaffList(data);
+      }
+    } catch (err) {
+      console.error('Error fetching staff list:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchStaffList();
+  }, [tenantId]);
+
   const handleSignOut = async () => {
     await signOut();
     router.push('/login');
@@ -102,6 +131,14 @@ export default function POSPage() {
     category: 'beverage' as Product['category'],
     icon: '☕'
   });
+
+  // Staff Switcher States
+  const [staffList, setStaffList] = useState<any[]>([]);
+  const [activeStaff, setActiveStaff] = useState<any | null>(null);
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+
+  // Mobile navigation state
+  const [activeMobileTab, setActiveMobileTab] = useState<'menu' | 'cart'>('menu');
 
   // Load products from localStorage or default
   useEffect(() => {
@@ -150,6 +187,7 @@ export default function POSPage() {
     amount: number;
     newBalance: number;
     txId: string;
+    items?: { product: Product; quantity: number }[];
   } | null>(null);
 
   const [scannedCardUid, setScannedCardUid] = useState<string>('');
@@ -323,6 +361,7 @@ export default function POSPage() {
 
   // Helper to complete the transaction once card and PIN are validated
   const executeTransaction = async (cardUid: string, amount: number, txType: 'charge' | 'topup', pinCode?: string) => {
+    const currentCartCopy = [...cart];
     try {
       const result = await OfflineDBService.processOfflineTransaction({
         cardUid,
@@ -331,7 +370,7 @@ export default function POSPage() {
         location,
         tenantId,
         pinCode,
-        performedBy: profile?.id
+        performedBy: activeStaff?.id || profile?.id
       });
 
       const guest = await OfflineDBService.getById<Guest>('guests', result.transaction.guest_id || '');
@@ -344,7 +383,8 @@ export default function POSPage() {
         roomNumber: result.updatedRoom.room_number,
         amount,
         newBalance: result.updatedRoom.wallet_balance,
-        txId: result.transaction.id
+        txId: result.transaction.id,
+        items: txType === 'charge' && posMode === 'menu' ? currentCartCopy : undefined
       });
 
       // Clear POS cart if it was a menu charge
@@ -548,24 +588,24 @@ export default function POSPage() {
     <div className="flex flex-col min-h-screen bg-background text-foreground pb-8">
       
       {/* 1. TOP HEADER BANNER (Realtime status, Location, Sync Status) */}
-      <header className="sticky top-0 z-40 bg-card/90 backdrop-blur-md border-b border-border px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="bg-indigo-600 p-2 rounded-lg text-white font-bold tracking-wider flex items-center gap-2">
-            <Layers size={20} className="text-white" />
-            <span className="hidden sm:inline font-semibold">RFID PAY WALLET</span>
-            <span className="sm:hidden font-semibold">RFID</span>
+      <header className="sticky top-0 z-40 bg-card/90 backdrop-blur-md border-b border-border px-3 py-2 md:px-4 md:py-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 md:gap-3 shadow-lg">
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="bg-indigo-600 p-1.5 md:p-2 rounded-lg text-white font-bold tracking-wider flex items-center gap-1.5 md:gap-2">
+            <Layers size={18} className="text-white" />
+            <span className="hidden sm:inline font-semibold text-xs md:text-sm">RFID PAY WALLET</span>
+            <span className="sm:hidden font-semibold text-xs">RFID</span>
           </div>
           
           <div className="h-6 w-[1px] bg-border hidden md:block"></div>
           
           {/* Active Terminal Location Selector */}
-          <div className="flex items-center gap-1.5 bg-card px-3 py-1.5 rounded-lg border border-border text-xs sm:text-sm">
-            <MapPin size={16} className="text-muted" />
-            <span className="text-muted font-medium">Bölge:</span>
+          <div className="flex items-center gap-1 bg-card px-2 py-1 md:px-3 md:py-1.5 rounded-lg border border-border text-xs md:text-sm">
+            <MapPin size={14} className="text-muted" />
+            <span className="text-muted font-medium hidden md:inline">Bölge:</span>
             <select 
               value={location} 
               onChange={(e) => setLocation(e.target.value as any)}
-              className="bg-transparent border-none text-indigo-500 dark:text-indigo-400 outline-none font-bold pr-1 cursor-pointer"
+              className="bg-transparent border-none text-indigo-500 dark:text-indigo-400 outline-none font-bold pr-1 cursor-pointer text-xs md:text-sm"
             >
               <option value="restaurant" className="bg-card text-foreground">Restaurant POS</option>
               <option value="bar" className="bg-card text-foreground">Lobby Bar POS</option>
@@ -576,9 +616,9 @@ export default function POSPage() {
         </div>
 
         {/* Sync & Connectivity Dashboard */}
-        <div className="flex items-center gap-2 text-xs sm:text-sm">
+        <div className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm">
           {/* Online/Offline Status */}
-          <div className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full font-bold ${
+          <div className={`flex items-center gap-1 px-2 py-1 md:px-2.5 md:py-1.5 rounded-full font-bold ${
             isOnline 
               ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400' 
               : 'bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400'
@@ -586,12 +626,12 @@ export default function POSPage() {
             {isOnline ? (
               <>
                 <Wifi size={14} className="animate-pulse" />
-                <span>ONLINE</span>
+                <span className="hidden sm:inline text-xs">ONLINE</span>
               </>
             ) : (
               <>
                 <WifiOff size={14} className="animate-bounce" />
-                <span>OFFLINE</span>
+                <span className="hidden sm:inline text-xs">OFFLINE</span>
               </>
             )}
           </div>
@@ -600,7 +640,7 @@ export default function POSPage() {
           <button 
             onClick={forceSync}
             disabled={isSyncing}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all ${
+            className={`flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 rounded-lg border transition-all ${
               syncQueueCount > 0 
                 ? 'bg-indigo-600 hover:bg-indigo-700 border-indigo-500 text-white' 
                 : 'bg-cardHover hover:bg-card border-border text-foreground'
@@ -611,7 +651,7 @@ export default function POSPage() {
             <span className="hidden md:inline">Eşitle</span>
             {syncQueueCount > 0 && (
               <span className="bg-amber-500 text-slate-950 font-extrabold px-1.5 py-0.5 rounded text-[10px] animate-pulse">
-                {syncQueueCount} Bekleyen
+                {syncQueueCount}
               </span>
             )}
           </button>
@@ -629,7 +669,7 @@ export default function POSPage() {
                 setProductForm({ name: '', price: '', category: 'beverage', icon: '☕' });
                 setIsProductModalOpen(true);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-all font-bold cursor-pointer"
+              className="flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 rounded-lg border border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-all font-bold cursor-pointer"
               title="Ürünleri Yönet"
             >
               <Settings size={14} />
@@ -637,10 +677,21 @@ export default function POSPage() {
             </button>
           )}
 
+          {/* Staff Switcher Button */}
+          <button
+            onClick={() => setIsStaffModalOpen(true)}
+            className="flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-all font-bold cursor-pointer text-xs md:text-sm"
+            title="Aktif personeli değiştir"
+          >
+            <UserCheck size={14} />
+            <span className="hidden sm:inline">Personel:</span>
+            <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">{activeStaff?.full_name?.split(' ')[0] || 'Seçilmedi'}</span>
+          </button>
+
           {/* Theme Toggle Button */}
           <button
             onClick={toggleTheme}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-card text-foreground hover:bg-cardHover transition-all font-bold cursor-pointer"
+            className="flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 rounded-lg border border-border bg-card text-foreground hover:bg-cardHover transition-all font-bold cursor-pointer"
             title={theme === 'light' ? 'Koyu moda geç' : 'Açık moda geç'}
           >
             {theme === 'light' ? <Moon size={14} /> : <Sun size={14} />}
@@ -650,7 +701,7 @@ export default function POSPage() {
           {/* Sign Out Button */}
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 hover:text-red-500 transition-all font-bold cursor-pointer"
+            className="flex items-center gap-1 px-2 py-1 md:px-3 md:py-1.5 rounded-lg border border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 hover:text-red-500 transition-all font-bold cursor-pointer"
             title="Oturumu kapat ve çıkış yap"
           >
             <LogOut size={14} />
@@ -685,10 +736,41 @@ export default function POSPage() {
 
       {posMode === 'menu' ? (
         /* 2. CORE CORE POS LAYOUT - PRODUCT MENU SCREEN */
-        <main className="max-w-[1600px] mx-auto w-full px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-fade-in">
+        <main className="max-w-[1600px] mx-auto w-full px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start animate-fade-in pb-16 lg:pb-0">
           
+          {/* Mobile Tab Switcher */}
+          <div className="lg:hidden flex bg-card/65 backdrop-blur-md border border-border p-1 rounded-2xl w-full col-span-1 mb-2">
+            <button
+              onClick={() => setActiveMobileTab('menu')}
+              className={`flex-1 py-3 text-center rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 ${
+                activeMobileTab === 'menu'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-muted hover:text-foreground'
+              }`}
+            >
+              🍔 Ürün Menüsü
+            </button>
+            <button
+              onClick={() => setActiveMobileTab('cart')}
+              className={`flex-1 py-3 text-center rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 relative ${
+                activeMobileTab === 'cart'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-muted hover:text-foreground'
+              }`}
+            >
+              🛒 Sipariş Sepeti
+              {cart.length > 0 && (
+                <span className="bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                  {cart.reduce((sum, item) => sum + item.quantity, 0)}
+                </span>
+              )}
+            </button>
+          </div>
+
           {/* LEFT COLUMN: THE BASKET & BILL (5 Cols) */}
-          <section className="lg:col-span-5 flex flex-col bg-card border border-border rounded-2xl overflow-hidden shadow-2xl h-[calc(100vh-180px)] min-h-[480px]">
+          <section className={`lg:col-span-5 flex-col bg-card border border-border rounded-2xl overflow-hidden shadow-2xl h-[calc(100vh-180px)] min-h-[480px] ${
+            activeMobileTab === 'cart' ? 'flex animate-fade-in' : 'hidden lg:flex'
+          }`}>
             
             {/* Cart Header */}
             <div className="p-4 bg-cardHover border-b border-border flex justify-between items-center">
@@ -776,7 +858,9 @@ export default function POSPage() {
           </section>
 
           {/* RIGHT COLUMN: TOUCH-OPTIMIZED PRODUCT GRID (7 Cols) */}
-          <section className="lg:col-span-7 flex flex-col space-y-4">
+          <section className={`lg:col-span-7 flex-col space-y-4 ${
+            activeMobileTab === 'menu' ? 'flex animate-fade-in' : 'hidden lg:flex'
+          }`}>
             
             {/* Category touch tabs */}
             <div className="flex gap-2 overflow-x-auto pb-1 text-sm scrollbar-none">
@@ -825,6 +909,33 @@ export default function POSPage() {
               ))}
             </div>
           </section>
+
+          {/* Floating Bottom Bar for Mobile (Visible on mobile, only on 'menu' tab, when cart has items) */}
+          {cart.length > 0 && activeMobileTab === 'menu' && (
+            <div className="fixed bottom-4 left-4 right-4 z-40 lg:hidden bg-card/95 backdrop-blur-md border border-border p-3.5 rounded-2xl flex items-center justify-between shadow-2xl animate-fade-in">
+              <div>
+                <span className="text-[10px] text-muted font-bold uppercase block">Toplam Tutar</span>
+                <span className="text-lg font-extrabold text-emerald-500 dark:text-emerald-400">₺{getCartTotal().toFixed(2)}</span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveMobileTab('cart')}
+                  className="bg-cardHover border border-border text-foreground font-bold px-3 py-2 rounded-xl text-xs flex items-center gap-1 cursor-pointer"
+                >
+                  Sepeti Gör ({cart.reduce((sum, item) => sum + item.quantity, 0)})
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenPayment}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-4 py-2 rounded-xl text-xs flex items-center gap-1 shadow-md cursor-pointer"
+                >
+                  <CreditCard size={14} />
+                  Ödeme Al
+                </button>
+              </div>
+            </div>
+          )}
         </main>
       ) : (
         /* BINKART CALCULATOR STYLE DIRECT POS SCREEN */
@@ -1268,6 +1379,20 @@ export default function POSPage() {
                         <span className="text-muted">Kalan Bakiye:</span>
                         <span className="font-extrabold text-emerald-600 dark:text-emerald-400">₺{lastPaymentResult.newBalance.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
                       </div>
+                      
+                      <button
+                        onClick={() => {
+                          if ((window as any).AndroidBridge && typeof (window as any).AndroidBridge.printPage === 'function') {
+                            (window as any).AndroidBridge.printPage();
+                          } else {
+                            window.print();
+                          }
+                        }}
+                        className="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs transition-all active:scale-95 cursor-pointer"
+                      >
+                        <Printer size={14} />
+                        FİŞ YAZDIR (TERMAL)
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1503,6 +1628,159 @@ export default function POSPage() {
           </div>
         </div>
       )}
+
+      {/* Hidden POS Receipt Print Section */}
+      {lastPaymentResult && (
+        <div id="pos-receipt-print" style={{ display: 'none' }}>
+          <div style={{ textAlign: 'center', fontFamily: 'monospace', padding: 20, color: 'black' }}>
+            <h2 style={{ margin: '0 0 5px 0', fontSize: 16 }}>{tenant?.name || 'Grand Resort Hotel'}</h2>
+            <p style={{ margin: '0 0 10px 0', fontSize: 10 }}>{location.toUpperCase()} POS FİŞİ</p>
+            <p style={{ margin: '0 0 15px 0', fontSize: 10 }}>--------------------------------</p>
+            
+            <div style={{ textAlign: 'left', fontSize: 11, lineHeight: '1.4', marginBottom: 10 }}>
+              <div><b>Fiş No:</b> {lastPaymentResult.txId.substring(0, 8).toUpperCase()}</div>
+              <div><b>Tarih:</b> {new Date().toLocaleString('tr-TR')}</div>
+              <div><b>Personel:</b> {activeStaff?.full_name || profile?.full_name}</div>
+              <div><b>Oda:</b> Oda {lastPaymentResult.roomNumber}</div>
+              <div><b>Misafir:</b> {lastPaymentResult.guestName}</div>
+            </div>
+            
+            <p style={{ margin: '5px 0', fontSize: 10 }}>--------------------------------</p>
+            
+            {lastPaymentResult.items && lastPaymentResult.items.length > 0 ? (
+              <div style={{ textAlign: 'left', fontSize: 11, marginBottom: 10 }}>
+                {lastPaymentResult.items.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
+                    <span>{item.quantity}x {item.product.name}</span>
+                    <span style={{ float: 'right' }}>₺{(item.product.price * item.quantity).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'left', fontSize: 11, marginBottom: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{directTxType === 'topup' ? 'Bakiye Yükleme' : 'Serbest Ödeme'}</span>
+                  <span style={{ float: 'right' }}>₺{lastPaymentResult.amount.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+            
+            <p style={{ margin: '5px 0', fontSize: 10 }}>--------------------------------</p>
+            
+            <div style={{ fontSize: 12, fontWeight: 'bold', margin: '5px 0', textAlign: 'left' }}>
+              TOPLAM: <span style={{ float: 'right' }}>₺{lastPaymentResult.amount.toFixed(2)}</span>
+            </div>
+            <div style={{ fontSize: 11, margin: '5px 0', textAlign: 'left' }}>
+              YENİ BAKİYE: <span style={{ float: 'right' }}>₺{lastPaymentResult.newBalance.toFixed(2)}</span>
+            </div>
+            
+            <p style={{ margin: '15px 0 5px 0', fontSize: 10 }}>--------------------------------</p>
+            <p style={{ margin: 0, fontSize: 9 }}>Bizi tercih ettiğiniz için teşekkür ederiz.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Staff Switcher Modal */}
+      {isStaffModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="w-full max-w-md bg-card border border-border rounded-3xl p-6 shadow-2xl relative">
+            <div className="flex justify-between items-center mb-6 pb-3 border-b border-border">
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <UserCheck size={18} className="text-emerald-500" />
+                Personel Değiştir
+              </h3>
+              <button 
+                onClick={() => setIsStaffModalOpen(false)} 
+                className="text-muted hover:text-foreground p-1 rounded-full hover:bg-cardHover"
+              >
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+              {staffList.length === 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted mb-4">Otelinize kayıtlı personel bulunamadı. Aşağıdaki hızlı profilleri kullanabilirsiniz:</p>
+                  {[
+                    { id: profile?.id || 'p-1', full_name: profile?.full_name || 'Admin', role: profile?.role || 'hotel_admin' },
+                    { id: 'mock-waiter-1', full_name: 'Ahmet Yılmaz (Garson)', role: 'waiter' },
+                    { id: 'mock-waiter-2', full_name: 'Ayşe Kaya (Garson)', role: 'waiter' },
+                    { id: 'mock-cashier-1', full_name: 'Mehmet Demir (Kasiyer)', role: 'cashier' },
+                  ].map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => {
+                        setActiveStaff(s);
+                        setIsStaffModalOpen(false);
+                        playBeep('success');
+                      }}
+                      className={`w-full flex justify-between items-center bg-cardHover hover:bg-card border p-3 rounded-xl transition-all ${
+                        activeStaff?.id === s.id ? 'border-emerald-500 text-emerald-500 font-bold' : 'border-border text-foreground'
+                      }`}
+                    >
+                      <span>{s.full_name}</span>
+                      <span className="text-[10px] uppercase font-bold bg-background px-2 py-0.5 rounded text-muted">{s.role}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                staffList.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      setActiveStaff(s);
+                      setIsStaffModalOpen(false);
+                      playBeep('success');
+                    }}
+                    className={`w-full flex justify-between items-center bg-cardHover hover:bg-card border p-3 rounded-xl transition-all ${
+                      activeStaff?.id === s.id ? 'border-emerald-500 text-emerald-500 font-bold' : 'border-border text-foreground'
+                    }`}
+                  >
+                    <span>{s.full_name}</span>
+                    <span className="text-[10px] uppercase font-bold bg-background px-2 py-0.5 rounded text-muted">
+                      {s.role === 'hotel_admin' ? 'Yönetici' :
+                       s.role === 'manager' ? 'Müdür' :
+                       s.role === 'waiter' ? 'Garson' :
+                       s.role === 'cashier' ? 'Kasiyer' : s.role}
+                    </span>
+                  </button>
+                ))
+              )}
+            </div>
+            
+            <div className="mt-6 flex justify-end">
+              <button 
+                onClick={() => setIsStaffModalOpen(false)}
+                className="btn btn-ghost text-xs"
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global CSS Style block for receipt print style */}
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+            background: white !important;
+            color: black !important;
+          }
+          #pos-receipt-print, #pos-receipt-print * {
+            visibility: visible;
+          }
+          #pos-receipt-print {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            background: white !important;
+            color: black !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

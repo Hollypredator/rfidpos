@@ -19,7 +19,8 @@ import {
   UserCheck,
   BarChart3,
   Sun,
-  Moon
+  Moon,
+  ConciergeBell
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -30,6 +31,7 @@ import SupportChatbot from '../../components/SupportChatbot';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Genel Bakış', icon: <LayoutDashboard size={18} /> },
+  { href: '/dashboard/reception', label: 'Resepsiyon', icon: <ConciergeBell size={18} /> },
   { href: '/dashboard/rooms', label: 'Odalar', icon: <DoorOpen size={18} /> },
   { href: '/dashboard/guests', label: 'Misafirler', icon: <Users size={18} /> },
   { href: '/dashboard/users', label: 'Personel', icon: <UserCheck size={18} /> },

@@ -38,7 +38,7 @@ function applyJoins(table: string, data: any[], selectQuery: string) {
       const copy = { ...guest };
       if (selectQuery.includes('room:rooms')) {
         const room = db.rooms.find(r => r.id === guest.room_id);
-        copy.room = room ? { room_number: room.room_number, wallet_balance: room.wallet_balance } : null;
+        copy.room = room ? { room_number: room.room_number, wallet_balance: room.wallet_balance, pin_code: room.pin_code } : null;
       }
       return copy;
     });
