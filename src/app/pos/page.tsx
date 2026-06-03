@@ -28,7 +28,9 @@ import {
   UserCheck,
   LogOut,
   Sun,
-  Moon
+  Moon,
+  Settings,
+  Edit
 } from 'lucide-react';
 import { OfflineDBService } from '../../services/db';
 import { useSync } from '../../hooks/useSync';
@@ -46,7 +48,7 @@ interface Product {
   icon: string;
 }
 
-const PRODUCTS: Product[] = [
+const DEFAULT_PRODUCTS: Product[] = [
   // Beverages
   { id: 'p1', name: 'Türk Kahvesi', price: 45.00, category: 'beverage', icon: '☕' },
   { id: 'p2', name: 'Taze Portakal Suyu', price: 65.00, category: 'beverage', icon: '🍹' },
@@ -89,6 +91,43 @@ export default function POSPage() {
 
   const [location, setLocation] = useState<'bar' | 'spa' | 'restaurant' | 'reception'>('restaurant');
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  
+  // Product state
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productForm, setProductForm] = useState({
+    name: '',
+    price: '',
+    category: 'beverage' as Product['category'],
+    icon: '☕'
+  });
+
+  // Load products from localStorage or default
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('rfid_pos_products');
+      if (saved) {
+        try {
+          setProducts(JSON.parse(saved));
+        } catch {
+          setProducts(DEFAULT_PRODUCTS);
+        }
+      } else {
+        setProducts(DEFAULT_PRODUCTS);
+        localStorage.setItem('rfid_pos_products', JSON.stringify(DEFAULT_PRODUCTS));
+      }
+    }
+  }, []);
+
+  const saveProducts = (updatedProducts: Product[]) => {
+    setProducts(updatedProducts);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('rfid_pos_products', JSON.stringify(updatedProducts));
+    }
+  };
+
+  const canManageProducts = profile?.role === 'hotel_admin' || profile?.role === 'manager' || profile?.role === 'super_admin';
   
   // Cart state
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
@@ -438,8 +477,72 @@ export default function POSPage() {
     }
   };
 
+  // --- PRODUCT MANAGEMENT HANDLERS ---
+  const handleSaveProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!productForm.name.trim()) return alert('Ürün adı boş olamaz.');
+    const priceNum = parseFloat(productForm.price);
+    if (isNaN(priceNum) || priceNum <= 0) return alert('Lütfen geçerli bir fiyat giriniz.');
+
+    if (editingProduct) {
+      const updated = products.map(p => 
+        p.id === editingProduct.id 
+          ? { ...p, name: productForm.name.trim(), price: priceNum, category: productForm.category, icon: productForm.icon.trim() || '📦' }
+          : p
+      );
+      saveProducts(updated);
+      
+      setCart(prevCart => 
+        prevCart.map(item => 
+          item.product.id === editingProduct.id 
+            ? { ...item, product: { ...item.product, name: productForm.name.trim(), price: priceNum, category: productForm.category, icon: productForm.icon.trim() || '📦' } }
+            : item
+        )
+      );
+
+      setEditingProduct(null);
+    } else {
+      const newProd: Product = {
+        id: 'p-' + Date.now().toString(36),
+        name: productForm.name.trim(),
+        price: priceNum,
+        category: productForm.category,
+        icon: productForm.icon.trim() || '📦'
+      };
+      saveProducts([...products, newProd]);
+    }
+
+    setProductForm({
+      name: '',
+      price: '',
+      category: 'beverage',
+      icon: '☕'
+    });
+  };
+
+  const handleDeleteProduct = (id: string) => {
+    if (!confirm('Bu ürünü silmek istediğinize emin misiniz?')) return;
+    const updated = products.filter(p => p.id !== id);
+    saveProducts(updated);
+    setCart(prev => prev.filter(item => item.product.id !== id));
+    if (editingProduct?.id === id) {
+      setEditingProduct(null);
+      setProductForm({ name: '', price: '', category: 'beverage', icon: '☕' });
+    }
+  };
+
+  const handleEditClick = (product: Product) => {
+    setEditingProduct(product);
+    setProductForm({
+      name: product.name,
+      price: product.price.toString(),
+      category: product.category,
+      icon: product.icon
+    });
+  };
+
   // Category filtering
-  const filteredProducts = PRODUCTS.filter(p => activeCategory === 'all' || p.category === activeCategory);
+  const filteredProducts = products.filter(p => activeCategory === 'all' || p.category === activeCategory);
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground pb-8">
@@ -517,6 +620,22 @@ export default function POSPage() {
             <span>Senkron: {lastSyncedAt || 'Bekleniyor...'}</span>
             {syncError && <span className="text-red-400 font-medium truncate max-w-[120px]">{syncError}</span>}
           </div>
+
+          {/* Product Management Settings Button */}
+          {canManageProducts && (
+            <button
+              onClick={() => {
+                setEditingProduct(null);
+                setProductForm({ name: '', price: '', category: 'beverage', icon: '☕' });
+                setIsProductModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-all font-bold cursor-pointer"
+              title="Ürünleri Yönet"
+            >
+              <Settings size={14} />
+              <span className="hidden sm:inline">Ürünleri Yönet</span>
+            </button>
+          )}
 
           {/* Theme Toggle Button */}
           <button
@@ -1199,6 +1318,188 @@ export default function POSPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 5. DIALOG MODAL: PRODUCT MANAGEMENT */}
+      {isProductModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-4xl bg-card border border-border rounded-3xl p-6 shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-6 pb-3 border-b border-border">
+              <h3 className="text-xl font-extrabold text-foreground flex items-center gap-2">
+                <Settings size={22} className="text-indigo-500" />
+                Ürün Yönetim Paneli
+              </h3>
+              <button 
+                onClick={() => {
+                  setIsProductModalOpen(false);
+                  setEditingProduct(null);
+                }} 
+                className="text-muted hover:text-foreground p-1.5 rounded-full hover:bg-cardHover transition-all"
+              >
+                <XCircle size={22} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 overflow-y-auto pr-1">
+              
+              {/* Left Column: Add / Edit Form (5 Cols) */}
+              <form onSubmit={handleSaveProduct} className="md:col-span-5 space-y-4 bg-background/50 border border-border/80 p-5 rounded-2xl">
+                <h4 className="text-sm font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-wider mb-2">
+                  {editingProduct ? '📝 Ürünü Düzenle' : '✨ Yeni Ürün Ekle'}
+                </h4>
+
+                {/* Product Name */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-muted">Ürün Adı</label>
+                  <input
+                    type="text"
+                    required
+                    value={productForm.name}
+                    onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                    placeholder="Örn: Türk Kahvesi, Limonata"
+                    className="w-full bg-background border border-border focus:border-indigo-500 text-foreground text-sm px-3.5 py-2.5 rounded-xl outline-none"
+                  />
+                </div>
+
+                {/* Product Price */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-muted">Fiyat (₺)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    min="0.01"
+                    value={productForm.price}
+                    onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                    placeholder="Örn: 45.00"
+                    className="w-full bg-background border border-border focus:border-indigo-500 text-foreground text-sm px-3.5 py-2.5 rounded-xl outline-none font-mono"
+                  />
+                </div>
+
+                {/* Product Category */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-muted">Kategori</label>
+                  <select
+                    value={productForm.category}
+                    onChange={(e) => setProductForm({ ...productForm, category: e.target.value as any })}
+                    className="w-full bg-background border border-border focus:border-indigo-500 text-foreground text-sm px-3.5 py-2.5 rounded-xl outline-none"
+                  >
+                    <option value="beverage">🍹 İçecek</option>
+                    <option value="food">🍕 Yemek</option>
+                    <option value="dessert">🍰 Tatlı</option>
+                    <option value="service">💆 Hizmet</option>
+                  </select>
+                </div>
+
+                {/* Product Icon / Emoji */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-muted">İkon (Emoji)</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      maxLength={4}
+                      value={productForm.icon}
+                      onChange={(e) => setProductForm({ ...productForm, icon: e.target.value })}
+                      placeholder="☕"
+                      className="w-16 text-center bg-background border border-border focus:border-indigo-500 text-xl px-2 py-2.5 rounded-xl outline-none"
+                    />
+                    
+                    {/* Quick select emoji buttons */}
+                    <div className="flex-1 flex flex-wrap gap-1.5 p-1 bg-background border border-border/80 rounded-xl max-h-[85px] overflow-y-auto">
+                      {['☕', '🍹', '🥤', '🍺', '🍸', '🍕', '🥪', '🍖', '🥗', '🧁', '🍰', '🍉', '💆', '🧺', '📦', '🍊', '🍋', '🍟', '🍦', '🍩'].map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => setProductForm({ ...productForm, icon: emoji })}
+                          className={`w-7 h-7 rounded-lg text-sm flex items-center justify-center transition-all ${
+                            productForm.icon === emoji ? 'bg-indigo-500 text-white' : 'bg-cardHover hover:bg-card border border-border/40'
+                          }`}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-indigo-650 hover:bg-indigo-700 text-white font-extrabold py-3 px-4 rounded-xl text-xs sm:text-sm active:scale-95 transition-all shadow-md"
+                  >
+                    {editingProduct ? 'Güncelle' : 'Ürünü Ekle'}
+                  </button>
+                  {editingProduct && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingProduct(null);
+                        setProductForm({ name: '', price: '', category: 'beverage', icon: '☕' });
+                      }}
+                      className="bg-cardHover hover:bg-card border border-border text-muted font-bold py-3 px-4 rounded-xl text-xs sm:text-sm active:scale-95 transition-all"
+                    >
+                      İptal
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              {/* Right Column: Products List (7 Cols) */}
+              <div className="md:col-span-7 flex flex-col">
+                <h4 className="text-sm font-bold text-muted uppercase tracking-wider mb-3">Mevcut Ürünler ({products.length})</h4>
+                
+                <div className="flex-1 overflow-y-auto space-y-2 max-h-[420px] pr-1">
+                  {products.length === 0 ? (
+                    <p className="text-xs text-muted italic text-center py-8">Henüz ürün bulunmuyor. Sol taraftan ekleyin.</p>
+                  ) : (
+                    products.map((product) => (
+                      <div 
+                        key={product.id}
+                        className="flex items-center justify-between bg-background border border-border/80 p-3 rounded-xl hover:border-borderLight transition-all"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl bg-card w-10 h-10 rounded-lg flex items-center justify-center border border-border">{product.icon}</span>
+                          <div>
+                            <p className="font-bold text-sm text-foreground">{product.name}</p>
+                            <p className="text-xs text-muted">
+                              {product.category === 'beverage' ? '🍹 İçecek' :
+                               product.category === 'food' ? '🍕 Yemek' :
+                               product.category === 'dessert' ? '🍰 Tatlı' : '💆 Hizmet'}
+                              {' '}&bull;{' '}
+                              <span className="text-indigo-650 dark:text-indigo-400 font-extrabold">₺{product.price.toFixed(2)}</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditClick(product)}
+                            className="p-2 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/15 active:scale-90 transition-all"
+                            title="Düzenle"
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProduct(product.id)}
+                            className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-655 dark:text-red-400 border border-red-500/15 active:scale-90 transition-all"
+                            title="Sil"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
