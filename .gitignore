@@ -31,3 +31,12 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# Android build outputs & local configs
+.gradle/
+build/
+**/build/
+**/.gradle/
+**/local.properties
+.idea/
+
