@@ -318,16 +318,25 @@ const mockAuth = {
     return { data: { subscription: { unsubscribe: () => { listeners.delete(callback); } } } };
   },
   signInWithPassword: async ({ email }: { email: string }) => {
+    const isFun = email.startsWith('fun_') || email.includes('fun_');
     const role = email.startsWith('super') 
       ? 'super_admin' 
-      : email.startsWith('waiter') 
+      : (email.startsWith('waiter') || email.includes('waiter'))
       ? 'waiter' 
-      : email.startsWith('receptionist') 
+      : (email.startsWith('receptionist') || email.includes('receptionist') || email.includes('kasa'))
       ? 'receptionist' 
       : 'hotel_admin';
 
+    const tenantId = role === 'super_admin' 
+      ? null 
+      : isFun 
+      ? 'mock-tenant-funtasia' 
+      : 'mock-tenant-id';
+
+    const userId = isFun ? `mock-fun-${role}-id` : `mock-${role}-id`;
+
     const user = {
-      id: `mock-${role}-id`,
+      id: userId,
       email: email,
       user_metadata: { full_name: `${email.split('@')[0]} Kullanıcısı`, role },
     };
@@ -339,7 +348,7 @@ const mockAuth = {
       if (!profile) {
         profile = {
           id: user.id,
-          tenant_id: role === 'super_admin' ? null : 'mock-tenant-id',
+          tenant_id: tenantId,
           full_name: `${email.split('@')[0].toUpperCase()} Yetkilisi`,
           email: email,
           role: role as any,
@@ -347,6 +356,11 @@ const mockAuth = {
           created_at: new Date().toISOString()
         };
         db.profiles.push(profile);
+        saveMockDb(db);
+      } else {
+        // Ensure tenant_id and role are correct in case profile already existed
+        profile.tenant_id = tenantId;
+        profile.role = role as any;
         saveMockDb(db);
       }
     }

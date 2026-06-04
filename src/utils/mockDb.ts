@@ -75,6 +75,18 @@ const DEFAULT_DATA: MockSchema = {
       subscription_expires_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
       settings: {},
       created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'mock-tenant-funtasia',
+      name: 'Funtasia Eğlence Merkezi',
+      slug: 'funtasia-eglence',
+      currency: 'TRY',
+      timezone: 'Europe/Istanbul',
+      status: 'active',
+      subscription_plan: 'premium',
+      subscription_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      settings: { business_type: 'entertainment' },
+      created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
     }
   ],
   profiles: [
@@ -113,6 +125,33 @@ const DEFAULT_DATA: MockSchema = {
       role: 'receptionist',
       is_active: true,
       created_at: new Date().toISOString()
+    },
+    {
+      id: 'mock-fun-admin-id',
+      tenant_id: 'mock-tenant-funtasia',
+      full_name: 'Funtasia Yönetici',
+      email: 'fun_admin@hotelpos.com',
+      role: 'hotel_admin',
+      is_active: true,
+      created_at: new Date().toISOString()
+    },
+    {
+      id: 'mock-fun-waiter-id',
+      tenant_id: 'mock-tenant-funtasia',
+      full_name: 'Funtasia Garson',
+      email: 'fun_waiter@hotelpos.com',
+      role: 'waiter',
+      is_active: true,
+      created_at: new Date().toISOString()
+    },
+    {
+      id: 'mock-fun-receptionist-id',
+      tenant_id: 'mock-tenant-funtasia',
+      full_name: 'Funtasia Kasa Görevlisi',
+      email: 'fun_kasa@hotelpos.com',
+      role: 'receptionist',
+      is_active: true,
+      created_at: new Date().toISOString()
     }
   ],
   locations: [
@@ -120,6 +159,10 @@ const DEFAULT_DATA: MockSchema = {
     { id: 'loc-restaurant', tenant_id: DEFAULT_TENANT_ID, name: 'Restoran', slug: 'restaurant', icon: 'UtensilsCrossed', is_active: true, created_at: new Date().toISOString() },
     { id: 'loc-bar', tenant_id: DEFAULT_TENANT_ID, name: 'Bar', slug: 'bar', icon: 'Wine', is_active: true, created_at: new Date().toISOString() },
     { id: 'loc-spa', tenant_id: DEFAULT_TENANT_ID, name: 'Spa', slug: 'spa', icon: 'Sparkles', is_active: true, created_at: new Date().toISOString() },
+    { id: 'loc-fun-reception', tenant_id: 'mock-tenant-funtasia', name: 'Danışma & Kasa', slug: 'reception', icon: 'Building', is_active: true, created_at: new Date().toISOString() },
+    { id: 'loc-fun-vr', tenant_id: 'mock-tenant-funtasia', name: 'VR Oyun Alanı', slug: 'vr-zone', icon: 'Gamepad2', is_active: true, created_at: new Date().toISOString() },
+    { id: 'loc-fun-trampoline', tenant_id: 'mock-tenant-funtasia', name: 'Trambolin Parkı', slug: 'trampoline', icon: 'Activity', is_active: true, created_at: new Date().toISOString() },
+    { id: 'loc-fun-bar', tenant_id: 'mock-tenant-funtasia', name: 'Kafe & Bar', slug: 'bar', icon: 'Coffee', is_active: true, created_at: new Date().toISOString() },
   ],
   rooms: [
     { id: 'room-101', tenant_id: DEFAULT_TENANT_ID, room_number: '101', wallet_balance: 1500, pin_code: '1234', status: 'occupied', daily_limit: 0, created_at: new Date().toISOString() },
@@ -127,11 +170,16 @@ const DEFAULT_DATA: MockSchema = {
     { id: 'room-103', tenant_id: DEFAULT_TENANT_ID, room_number: '103', wallet_balance: 0, pin_code: '0000', status: 'active', daily_limit: 0, created_at: new Date().toISOString() },
     { id: 'room-104', tenant_id: DEFAULT_TENANT_ID, room_number: '104', wallet_balance: 4200, pin_code: '2580', status: 'occupied', daily_limit: 0, created_at: new Date().toISOString() },
     { id: 'room-105', tenant_id: DEFAULT_TENANT_ID, room_number: '105', wallet_balance: 120, pin_code: '9876', status: 'maintenance', daily_limit: 0, created_at: new Date().toISOString() },
+    { id: 'room-201', tenant_id: 'mock-tenant-funtasia', room_number: '201', wallet_balance: 500, pin_code: '1234', status: 'occupied', daily_limit: 0, created_at: new Date().toISOString() },
+    { id: 'room-202', tenant_id: 'mock-tenant-funtasia', room_number: '202', wallet_balance: 150, pin_code: '4321', status: 'occupied', daily_limit: 0, created_at: new Date().toISOString() },
+    { id: 'room-203', tenant_id: 'mock-tenant-funtasia', room_number: '203', wallet_balance: 0, pin_code: '0000', status: 'active', daily_limit: 0, created_at: new Date().toISOString() },
   ],
   guests: [
     { id: 'guest-1', room_id: 'room-101', guest_name: 'Can Yılmaz', card_uid: 'A1B2C3D4', status: 'active', created_at: new Date().toISOString() },
     { id: 'guest-2', room_id: 'room-102', guest_name: 'Merve Kaya', card_uid: 'E5F6G7H8', status: 'active', created_at: new Date().toISOString() },
     { id: 'guest-3', room_id: 'room-104', guest_name: 'John Doe', card_uid: '90ABCDEF', status: 'active', created_at: new Date().toISOString() },
+    { id: 'guest-201', room_id: 'room-201', guest_name: 'Alp Eren', card_uid: 'E1E2E3E4', status: 'active', created_at: new Date().toISOString() },
+    { id: 'guest-202', room_id: 'room-202', guest_name: 'Selin Yılmaz', card_uid: 'D1D2D3D4', status: 'active', created_at: new Date().toISOString() },
   ],
   transactions: [
     {

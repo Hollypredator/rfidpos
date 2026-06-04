@@ -145,8 +145,15 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 3. Link Profiles to the Tenant (Except Super Admin)
--- The trigger "on_auth_user_created" created these profiles, we update tenant_id
+-- 3. Link Profiles to the Tenant (Except Super Admin) (And create if missing)
+INSERT INTO public.profiles (id, tenant_id, full_name, email, role, is_active)
+VALUES 
+  ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 'Demo Otel Yöneticisi', 'admin@hotelpos.com', 'hotel_admin', true),
+  ('44444444-4444-4444-4444-444444444444', '11111111-1111-1111-1111-111111111111', 'Demo Garson', 'waiter@hotelpos.com', 'waiter', true),
+  ('55555555-5555-5555-5555-555555555555', '11111111-1111-1111-1111-111111111111', 'Demo Resepsiyonist', 'receptionist@hotelpos.com', 'receptionist', true)
+ON CONFLICT (id) DO UPDATE 
+SET tenant_id = EXCLUDED.tenant_id, role = EXCLUDED.role, full_name = EXCLUDED.full_name;
+
 UPDATE public.profiles
 SET tenant_id = '11111111-1111-1111-1111-111111111111'
 WHERE email IN ('admin@hotelpos.com', 'waiter@hotelpos.com', 'receptionist@hotelpos.com');
@@ -256,7 +263,15 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 3. Link Profiles to Funtasia Tenant
+-- 3. Link Profiles to Funtasia Tenant (And create if missing)
+INSERT INTO public.profiles (id, tenant_id, full_name, email, role, is_active)
+VALUES 
+  ('11112222-3333-4444-5555-666677778888', '99999999-9999-9999-9999-999999999999', 'Funtasia Yönetici', 'fun_admin@hotelpos.com', 'hotel_admin', true),
+  ('11112222-3333-4444-5555-666677779999', '99999999-9999-9999-9999-999999999999', 'Funtasia Kasa Görevlisi', 'fun_kasa@hotelpos.com', 'receptionist', true),
+  ('11112222-3333-4444-5555-666677770000', '99999999-9999-9999-9999-999999999999', 'Funtasia Garson', 'fun_waiter@hotelpos.com', 'waiter', true)
+ON CONFLICT (id) DO UPDATE 
+SET tenant_id = EXCLUDED.tenant_id, role = EXCLUDED.role, full_name = EXCLUDED.full_name;
+
 UPDATE public.profiles
 SET tenant_id = '99999999-9999-9999-9999-999999999999'
 WHERE email IN ('fun_admin@hotelpos.com', 'fun_kasa@hotelpos.com', 'fun_waiter@hotelpos.com');
