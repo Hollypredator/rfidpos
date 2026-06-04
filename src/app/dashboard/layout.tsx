@@ -174,6 +174,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
   }, [tenant?.id]);
 
+  // Android Javascript Bridge Listener for Dashboard card lookup
+  useEffect(() => {
+    const handleAndroidCard = (uid: string) => {
+      if (pathname === '/dashboard/reception' || pathname === '/pos') {
+        return;
+      }
+      setScannedCardUid(uid);
+    };
+    (window as any).handleRFIDCard = handleAndroidCard;
+    return () => {
+      if ((window as any).handleRFIDCard === handleAndroidCard) {
+        delete (window as any).handleRFIDCard;
+      }
+    };
+  }, [pathname]);
+
   useEffect(() => {
     if (!isLoading) {
       if (!profile) {
@@ -280,6 +296,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               Hızlı Erişim
             </div>
           </div>
+
+          <button
+            className="sidebar-link"
+            onClick={() => setScannedCardUid('manual')}
+            style={{ marginBottom: 4 }}
+          >
+            <Search size={18} />
+            Kart Sorgula
+          </button>
 
           <button
             className="sidebar-link"

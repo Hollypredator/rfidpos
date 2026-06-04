@@ -32,6 +32,8 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
   // Form states
   const [topupAmount, setTopupAmount] = useState<string>('');
   const [topupSuccess, setTopupSuccess] = useState(false);
+  const [activeUid, setActiveUid] = useState<string | null>(null);
+  const [manualUid, setManualUid] = useState<string>('');
 
   // Audio helper
   const playBeep = (type: 'success' | 'error' | 'scan') => {
@@ -78,13 +80,25 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
   useEffect(() => {
     if (cardUid) {
       setIsOpen(true);
-      fetchCardDetails(cardUid);
+      if (cardUid !== 'manual') {
+        setActiveUid(cardUid);
+        fetchCardDetails(cardUid);
+      } else {
+        setActiveUid(null);
+        setGuest(null);
+        setRoom(null);
+        setRecentTxs([]);
+        setLoading(false);
+        setTopupAmount('');
+        setTopupSuccess(false);
+      }
     } else {
       setIsOpen(false);
     }
   }, [cardUid]);
 
   const fetchCardDetails = async (uid: string) => {
+    setActiveUid(uid);
     setLoading(true);
     setError(null);
     setGuest(null);
@@ -139,6 +153,13 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
       playBeep('error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleManualSearch = () => {
+    if (manualUid.trim()) {
+      setActiveUid(manualUid.trim());
+      fetchCardDetails(manualUid.trim());
     }
   };
 
@@ -284,7 +305,13 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
             </div>
             <div>
               <h3 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>Hızlı Kart Sorgulama</h3>
-              <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>UID: <span className="font-mono text-indigo-400">{cardUid}</span></p>
+              <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
+                {activeUid ? (
+                  <>UID: <span className="font-mono text-indigo-400">{activeUid}</span></>
+                ) : (
+                  'Manuel Arama veya Kart Okutun'
+                )}
+              </p>
             </div>
           </div>
           <button 
@@ -301,6 +328,39 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
           <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--muted)' }}>
             <Loader2 size={36} className="animate-spin" style={{ margin: '0 auto 16px', color: 'var(--accent)' }} />
             <p style={{ fontWeight: 500 }}>Kart verileri sorgulanıyor...</p>
+          </div>
+        ) : cardUid === 'manual' && !activeUid && !guest && !error ? (
+          /* Manual Search Input Mode */
+          <div style={{ padding: '20px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0, textAlign: 'center', lineHeight: 1.5 }}>
+              Sorgulamak istediğiniz RFID kart numarasını (UID) girin veya kartı cihazınıza yaklaştırın.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                className="input"
+                type="text"
+                placeholder="Örn: A1B2C3D4..."
+                value={manualUid}
+                onChange={(e) => setManualUid(e.target.value.toUpperCase())}
+                style={{ flex: 1, height: 44 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && manualUid.trim()) {
+                    handleManualSearch();
+                  }
+                }}
+              />
+              <button
+                className="btn btn-primary"
+                onClick={handleManualSearch}
+                disabled={!manualUid.trim()}
+                style={{ height: 44, padding: '0 24px' }}
+              >
+                Sorgula
+              </button>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button className="btn btn-ghost" onClick={handleClose}>İptal</button>
+            </div>
           </div>
         ) : error ? (
           /* Error State */
@@ -325,12 +385,27 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
               Bu RFID kart (`{cardUid}`) şu an hiçbir aktif misafire veya odaya tanımlı değildir. Havuzda boşta beklemektedir.
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-              <button className="btn btn-ghost" onClick={handleClose}>Kapat</button>
+              {cardUid === 'manual' ? (
+                <button 
+                  className="btn btn-ghost" 
+                  onClick={() => {
+                    setActiveUid(null);
+                    setGuest(null);
+                    setRoom(null);
+                    setRecentTxs([]);
+                    setManualUid('');
+                  }}
+                >
+                  Yeni Sorgulama
+                </button>
+              ) : (
+                <button className="btn btn-ghost" onClick={handleClose}>Kapat</button>
+              )}
               <button 
                 className="btn btn-primary" 
                 onClick={() => {
                   handleClose();
-                  window.location.href = `/dashboard/guests?scanUid=${cardUid}`;
+                  window.location.href = `/dashboard/guests?scanUid=${activeUid || cardUid}`;
                 }}
               >
                 Yeni Misafire Tanımla
@@ -487,10 +562,25 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
 
             {/* Check-out Action Button */}
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 16, marginTop: 8, display: 'flex', gap: 12 }}>
+              {cardUid === 'manual' && (
+                <button
+                  className="btn btn-ghost"
+                  onClick={() => {
+                    setActiveUid(null);
+                    setGuest(null);
+                    setRoom(null);
+                    setRecentTxs([]);
+                    setManualUid('');
+                  }}
+                  style={{ flex: 1, border: '1px solid var(--border)' }}
+                >
+                  Yeni Sorgulama
+                </button>
+              )}
               <button 
                 className="btn btn-ghost" 
                 onClick={handleClose} 
-                style={{ flex: 1 }}
+                style={{ flex: cardUid === 'manual' ? 1 : 2 }}
                 disabled={actionLoading}
               >
                 Kapat
