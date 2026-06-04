@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Building2, CreditCard, Package, MessageSquare, 
-  LogOut, Shield, Sun, Moon, Menu
+  LogOut, Shield, Sun, Moon, Menu, Users
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -12,6 +12,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 const NAV_ITEMS = [
   { href: '/superadmin', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
   { href: '/superadmin/tenants', label: 'Oteller', icon: <Building2 size={18} /> },
+  { href: '/superadmin/users', label: 'Kullanıcılar', icon: <Users size={18} /> },
   { href: '/superadmin/payments', label: 'Ödemeler & Onay', icon: <CreditCard size={18} /> },
   { href: '/superadmin/orders', label: 'Donanım Siparişleri', icon: <Package size={18} /> },
   { href: '/superadmin/support', label: 'Destek Talepleri', icon: <MessageSquare size={18} /> },

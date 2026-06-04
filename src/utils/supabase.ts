@@ -318,21 +318,15 @@ const mockAuth = {
       ? 'mock-tenant-funtasia' 
       : 'mock-tenant-id';
 
-    const userId = isFun ? `mock-fun-${role}-id` : `mock-${role}-id`;
-
-    const user = {
-      id: userId,
-      email: email,
-      user_metadata: { full_name: `${email.split('@')[0]} Kullanıcısı`, role },
-    };
+    const defaultUserId = isFun ? `mock-fun-${role}-id` : `mock-${role}-id`;
 
     if (typeof window !== 'undefined') {
-      localStorage.setItem('mock_user', JSON.stringify(user));
       const db = getMockDb();
-      let profile = db.profiles.find(p => p.id === user.id);
+      let profile = db.profiles.find(p => p.email === email);
+      let userId = defaultUserId;
       if (!profile) {
         profile = {
-          id: user.id,
+          id: userId,
           tenant_id: tenantId,
           full_name: `${email.split('@')[0].toUpperCase()} Yetkilisi`,
           email: email,
@@ -343,16 +337,26 @@ const mockAuth = {
         db.profiles.push(profile);
         saveMockDb(db);
       } else {
-        // Ensure tenant_id and role are correct in case profile already existed
-        profile.tenant_id = tenantId;
-        profile.role = role as any;
-        saveMockDb(db);
+        userId = profile.id;
+        // Keep profile in sync but do not override selected tenant_id if it was set explicitly
+        if (!profile.tenant_id && tenantId) {
+          profile.tenant_id = tenantId;
+          saveMockDb(db);
+        }
       }
+
+      const user = {
+        id: userId,
+        email: email,
+        user_metadata: { full_name: profile.full_name, role: profile.role },
+      };
+      localStorage.setItem('mock_user', JSON.stringify(user));
     }
 
-    const session = { user, access_token: 'mock-token' };
+    const userObj = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('mock_user') || 'null') : null;
+    const session = { user: userObj, access_token: 'mock-token' };
     mockAuth.notify('SIGNED_IN', session);
-    return { data: { user, session }, error: null };
+    return { data: { user: userObj, session }, error: null };
   },
   signOut: async () => {
     if (typeof window !== 'undefined') {
