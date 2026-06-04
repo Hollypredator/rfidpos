@@ -291,6 +291,22 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
         }} 
         onClick={(e) => e.stopPropagation()}
       >
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes nfc-pulse {
+            0% { transform: scale(0.9); opacity: 0.1; }
+            50% { transform: scale(1.1); opacity: 0.6; }
+            100% { transform: scale(1.3); opacity: 0; }
+          }
+          @keyframes card-float {
+            0% { transform: translateY(12px) rotate(-1deg); }
+            50% { transform: translateY(-4px) rotate(2deg); }
+            100% { transform: translateY(12px) rotate(-1deg); }
+          }
+          @keyframes glow-led {
+            0%, 100% { opacity: 0.4; filter: drop-shadow(0 0 2px rgba(16, 185, 129, 0.4)); }
+            50% { opacity: 1; filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.9)); }
+          }
+        `}} />
         {/* Modal Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -330,37 +346,242 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
             <p style={{ fontWeight: 500 }}>Kart verileri sorgulanıyor...</p>
           </div>
         ) : cardUid === 'manual' && !activeUid && !guest && !error ? (
-          /* Manual Search Input Mode */
-          <div style={{ padding: '20px 0', display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0, textAlign: 'center', lineHeight: 1.5 }}>
-              Sorgulamak istediğiniz RFID kart numarasını (UID) girin veya kartı cihazınıza yaklaştırın.
-            </p>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                className="input"
-                type="text"
-                placeholder="Örn: A1B2C3D4..."
-                value={manualUid}
-                onChange={(e) => setManualUid(e.target.value.toUpperCase())}
-                style={{ flex: 1, height: 44 }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && manualUid.trim()) {
-                    handleManualSearch();
-                  }
-                }}
-              />
-              <button
-                className="btn btn-primary"
-                onClick={handleManualSearch}
-                disabled={!manualUid.trim()}
-                style={{ height: 44, padding: '0 24px' }}
-              >
-                Sorgula
-              </button>
+          /* Manual Search Input Mode with Premium Visual Indicators */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '10px 0' }}>
+            
+            {/* 1. Interactive Physical Scanner Mockup Panel */}
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              padding: '28px 24px',
+              background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%)',
+              border: '1px solid rgba(99, 102, 241, 0.2)',
+              borderRadius: 20,
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.05), 0 4px 20px rgba(0,0,0,0.2)'
+            }}>
+              {/* Green active LED status dot */}
+              <div style={{
+                position: 'absolute',
+                top: 14,
+                left: 14,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                background: 'rgba(16, 185, 129, 0.1)',
+                border: '1px solid rgba(16, 185, 129, 0.2)',
+                padding: '4px 10px',
+                borderRadius: 20,
+                fontSize: 10,
+                color: 'var(--success-light)',
+                fontWeight: 700,
+                letterSpacing: '0.05em'
+              }}>
+                <span style={{ 
+                  width: 6, 
+                  height: 6, 
+                  borderRadius: '50%', 
+                  backgroundColor: 'var(--success)', 
+                  display: 'inline-block',
+                  animation: 'glow-led 1.5s infinite'
+                }} />
+                OKUYUCU AKTİF
+              </div>
+
+              {/* Antenna Pulse concentric rings */}
+              <div style={{
+                width: 90, height: 90,
+                borderRadius: '50%',
+                border: '1px dashed rgba(99, 102, 241, 0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                position: 'relative',
+                margin: '12px 0 20px'
+              }}>
+                {/* Concentric rings animating */}
+                <div style={{
+                  position: 'absolute',
+                  width: '100%', height: '100%',
+                  borderRadius: '50%',
+                  border: '2px solid var(--accent)',
+                  animation: 'nfc-pulse 2s linear infinite'
+                }} />
+                <div style={{
+                  position: 'absolute',
+                  width: '80%', height: '80%',
+                  borderRadius: '50%',
+                  border: '1.5px solid var(--accent-light)',
+                  animation: 'nfc-pulse 2s linear infinite',
+                  animationDelay: '0.6s'
+                }} />
+                
+                {/* Floating RFID Card Graphic */}
+                <div style={{
+                  position: 'relative',
+                  width: 52, height: 34,
+                  borderRadius: 6,
+                  background: 'linear-gradient(135deg, var(--accent), #4f46e5)',
+                  boxShadow: '0 8px 16px rgba(99, 102, 241, 0.4)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'white',
+                  animation: 'card-float 2.5s ease-in-out infinite',
+                  zIndex: 2
+                }}>
+                  <CreditCard size={18} />
+                </div>
+              </div>
+
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-light)', letterSpacing: '0.03em' }}>KARTINIZI OKUTUN</span>
+              <span style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, textAlign: 'center', maxWidth: 300, lineHeight: 1.4 }}>
+                Cihazın NFC alanına kartı dokundurun veya aşağıdaki alana manuel giriş yapın.
+              </span>
             </div>
+
+            {/* 2. Visual Guide Skeleton Preview Card showing where queried data will appear */}
+            <div style={{
+              border: '1px dashed rgba(255, 255, 255, 0.12)',
+              borderRadius: 20,
+              padding: 18,
+              background: 'rgba(255, 255, 255, 0.01)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 16,
+              position: 'relative'
+            }}>
+              {/* Watermark Label */}
+              <div style={{
+                position: 'absolute',
+                top: -9,
+                left: 18,
+                background: 'rgba(15, 23, 42, 0.95)',
+                padding: '0 8px',
+                fontSize: 9,
+                color: 'var(--muted)',
+                fontWeight: 700,
+                letterSpacing: '0.08em'
+              }}>
+                TASARIM ŞABLONU ÖNİZLEMESİ
+              </div>
+
+              {/* Guest Details Placeholder */}
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 1fr', 
+                gap: 12,
+                border: '1px dashed rgba(255,255,255,0.06)',
+                borderRadius: 12,
+                padding: 12,
+                opacity: 0.5
+              }}>
+                <div>
+                  <span style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Aktif Misafir</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                    <User size={14} style={{ color: 'var(--muted)' }} />
+                    <span style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>Misafir İsmi Buraya Gelecek</span>
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Oda Numarası</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                    <DoorOpen size={14} style={{ color: 'var(--muted)' }} />
+                    <span style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>Oda No Buraya Gelecek</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Wallet Balance Display Placeholder */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.03), rgba(168, 85, 247, 0.02))',
+                border: '1px dashed rgba(99, 102, 241, 0.4)',
+                borderRadius: 16,
+                padding: '16px 20px',
+                textAlign: 'center',
+                position: 'relative'
+              }}>
+                {/* Pointer / Callout Badge */}
+                <div style={{
+                  position: 'absolute',
+                  top: -8,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: 'var(--accent)',
+                  color: 'white',
+                  padding: '1px 8px',
+                  borderRadius: 4,
+                  fontSize: 8,
+                  fontWeight: 800,
+                  letterSpacing: '0.05em',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                }}>
+                  BAKİYE GÖSTERGESİ
+                </div>
+                <span style={{ fontSize: 10, color: 'var(--accent-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mevcut Oda Bakiyesi</span>
+                <div style={{ fontSize: 26, fontWeight: 800, color: 'rgba(255,255,255,0.25)', marginTop: 4, fontFamily: 'monospace' }}>
+                  ₺ *,***.**
+                </div>
+                <div style={{ fontSize: 9, color: 'var(--muted)', marginTop: 2, fontStyle: 'italic' }}>
+                  Okutulan kartın toplam bakiyesi burada görüntülenecektir.
+                </div>
+              </div>
+
+              {/* Transactions List Placeholder */}
+              <div>
+                <span style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: 6 }}>Odaya Ait Son İşlemler</span>
+                <div style={{ 
+                  border: '1px dashed rgba(255,255,255,0.06)', 
+                  borderRadius: 12, 
+                  padding: 10,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                  opacity: 0.4
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                    <span style={{ color: 'var(--muted)' }}>• Harcama (Önizleme)</span>
+                    <span style={{ color: 'var(--muted)', fontFamily: 'monospace' }}>-₺00,00</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                    <span style={{ color: 'var(--muted)' }}>• Yükleme (Önizleme)</span>
+                    <span style={{ color: 'var(--muted)', fontFamily: 'monospace' }}>+₺00,00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Manual input form */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label className="input-label" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em' }}>MANUEL KART UID GİRİŞİ</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="Örn: A1B2C3D4..."
+                  value={manualUid}
+                  onChange={(e) => setManualUid(e.target.value.toUpperCase())}
+                  style={{ flex: 1, height: 44 }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && manualUid.trim()) {
+                      handleManualSearch();
+                    }
+                  }}
+                />
+                <button
+                  className="btn btn-primary"
+                  onClick={handleManualSearch}
+                  disabled={!manualUid.trim()}
+                  style={{ height: 44, padding: '0 24px' }}
+                >
+                  Sorgula
+                </button>
+              </div>
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <button className="btn btn-ghost" onClick={handleClose}>İptal</button>
             </div>
+
           </div>
         ) : error ? (
           /* Error State */
@@ -413,8 +634,32 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
             </div>
           </div>
         ) : (
-          /* Card Found (Active Guest & Room) */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* NFC Reader Continuous Scan Banner */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              padding: '10px 14px',
+              background: 'rgba(16, 185, 129, 0.05)',
+              border: '1px solid rgba(16, 185, 129, 0.15)',
+              borderRadius: 14,
+              fontSize: 12,
+              color: 'var(--success-light)',
+              fontWeight: 500,
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.05)'
+            }}>
+              <span style={{ 
+                width: 6, 
+                height: 6, 
+                borderRadius: '50%', 
+                backgroundColor: 'var(--success)', 
+                display: 'inline-block',
+                animation: 'glow-led 1.5s infinite'
+              }} />
+              <span>Temassız Okuyucu Hazır: Yeni bir kartı doğrudan yaklaştırabilirsiniz.</span>
+            </div>
             
             {/* Quick Guest Info */}
             <div style={{ 
