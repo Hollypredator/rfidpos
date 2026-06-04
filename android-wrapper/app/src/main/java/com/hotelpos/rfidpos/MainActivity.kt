@@ -106,6 +106,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        checkAndNotifyNfcStatus()
         // Enable NFC foreground dispatch
         nfcAdapter?.enableForegroundDispatch(this, pendingIntent, null, null)
 
@@ -168,6 +169,18 @@ class MainActivity : AppCompatActivity() {
         // Run JavaScript handleRFIDCard function on main thread
         runOnUiThread {
             webView.evaluateJavascript("if (typeof window.handleRFIDCard === 'function') { window.handleRFIDCard('$cardUid'); }", null)
+        }
+    }
+
+    private fun checkAndNotifyNfcStatus() {
+        val adapter = NfcAdapter.getDefaultAdapter(this)
+        val status = when {
+            adapter == null -> "not_supported"
+            !adapter.isEnabled -> "disabled"
+            else -> "enabled"
+        }
+        runOnUiThread {
+            webView.evaluateJavascript("if (typeof window.onNFCStatusChanged === 'function') { window.onNFCStatusChanged('$status'); }", null)
         }
     }
 

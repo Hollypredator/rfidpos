@@ -62,10 +62,10 @@ const FEATURES = [
 ];
 
 const HOW_IT_WORKS = [
-  { step: '1', title: 'Misafire Kart Ver', desc: 'Check-in sırasında RFID kartı misafire atayın ve odaya bakiye yükleyin.' },
-  { step: '2', title: 'Kartı Dokundur', desc: 'Restoran, bar veya spa\'da misafir kartını POS cihazına dokundurur.' },
-  { step: '3', title: 'PIN ile Onayla', desc: '4 haneli oda PIN kodunu girerek ödeme tamamlanır. Bakiye anında düşer.' },
-  { step: '4', title: 'Check-out\'ta Öde', desc: 'Tüm harcamalar oda hesabında toplanır. Check-out\'ta tek seferde ödenir.' },
+  { step: '1', title: 'Kart veya Bileklik Ver', desc: 'Giriş esnasında RFID kart/bilekliği müşteriye tanımlayın ve cüzdana bakiye yükleyin.' },
+  { step: '2', title: 'Kartı Dokundur', desc: 'Satış noktalarında müşteri kart veya bilekliğini POS cihazına dokundurur.' },
+  { step: '3', title: 'PIN ile Onayla', desc: '4 haneli güvenlik PIN kodunu girerek ödeme tamamlanır. Bakiye anında düşer.' },
+  { step: '4', title: 'Çıkışta İade Al', desc: 'Tüm harcamalar kart hesabından düşer. Çıkışta kalan bakiye tek tıkla iade edilir.' },
 ];
 
 export default function LandingPage() {
@@ -103,8 +103,7 @@ export default function LandingPage() {
           >
             {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
           </button>
-          <a href="/login" className="btn btn-ghost btn-sm">Giriş Yap</a>
-          <a href="/register" className="btn btn-primary btn-sm">Ücretsiz Başla</a>
+          <a href="/login" className="btn btn-primary btn-sm">Giriş Yap</a>
         </div>
       </nav>
 
@@ -120,7 +119,7 @@ export default function LandingPage() {
 
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 720 }}>
           <div className="badge badge-accent" style={{ marginBottom: 20, fontSize: 13 }}>
-            <Zap size={14} /> Oteller İçin Kapalı Devre Ödeme Sistemi
+            <Zap size={14} /> Otel & Eğlence Merkezleri İçin Kapalı Devre Ödeme Sistemi
           </div>
 
           <h1 style={{
@@ -130,7 +129,7 @@ export default function LandingPage() {
             marginBottom: 20,
             letterSpacing: '-0.02em',
           }}>
-            RFID Kartlarla{' '}
+            RFID Kart ve Bilekliklerle{' '}
             <span style={{
               background: 'linear-gradient(135deg, var(--accent-light), var(--success))',
               WebkitBackgroundClip: 'text',
@@ -138,7 +137,7 @@ export default function LandingPage() {
             }}>
               Nakit Taşımadan
             </span>{' '}
-            Otel İçi Ödeme
+            Hızlı Ödeme Altyapısı
           </h1>
 
           <p style={{
@@ -149,18 +148,15 @@ export default function LandingPage() {
             maxWidth: 560,
             marginLeft: 'auto', marginRight: 'auto',
           }}>
-            Misafirleriniz tek bir kart ile tüm otel hizmetlerinden faydalansın. 
-            Bar, restoran, spa — tüm harcamalar oda hesabına yazılsın.
+            Oteller, aqua parklar, lunaparklar ve festival alanları için kapalı devre RFID ödeme platformu.
+            Müşterileriniz nakit/kart taşımadan hızlıca harcama yapsın.
           </p>
 
           <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="/register" className="btn btn-primary btn-lg" style={{ gap: 10 }}>
-              <Building2 size={20} />
-              Otelinizi Kaydedin
-              <ArrowRight size={18} />
-            </a>
-            <a href="/login" className="btn btn-ghost btn-lg">
-              Demo Giriş
+            <a href="/login" className="btn btn-primary btn-lg" style={{ gap: 10 }}>
+              <Lock size={18} />
+              Sisteme Giriş Yap
+              <ArrowRight size={16} />
             </a>
           </div>
         </div>
@@ -263,7 +259,7 @@ export default function LandingPage() {
           <span style={{ fontSize: 15, fontWeight: 600 }}>RFID<span style={{ color: 'var(--accent)' }}>POS</span></span>
         </div>
         <p style={{ fontSize: 13, color: 'var(--muted)' }}>
-          © 2026 RFID POS — Otel İçi Kapalı Devre Ödeme Sistemi. Tüm hakları saklıdır.
+          © 2026 RFID POS — Otel & Eğlence Merkezleri Kapalı Devre Ödeme Sistemi. Tüm hakları saklıdır.
         </p>
       </footer>
     </div>

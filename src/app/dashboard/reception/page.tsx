@@ -9,10 +9,14 @@ import {
 import { useAuth } from '../../../contexts/AuthContext';
 import { createClient } from '../../../utils/supabase';
 import { Room, Guest, Transaction } from '../../../types';
+import { useTerminology } from '../../../hooks/useTerminology';
+import { useToast } from '../../../contexts/ToastContext';
 
 function ReceptionPageContent() {
   const { tenant, profile } = useAuth();
   const supabase = createClient();
+  const t = useTerminology();
+  const { toast } = useToast();
   const searchParams = useSearchParams();
   const scanUidParam = searchParams?.get('scanUid') || '';
 
@@ -26,6 +30,7 @@ function ReceptionPageContent() {
   const [cardUid, setCardUid] = useState('');
   const [pinCode, setPinCode] = useState('1234');
   const [initialBalance, setInitialBalance] = useState<number>(0);
+  const [depositAmount, setDepositAmount] = useState<number>(0);
   const [loadingCheckin, setLoadingCheckin] = useState(false);
   const [errorCheckin, setErrorCheckin] = useState<string | null>(null);
   const [successCheckin, setSuccessCheckin] = useState(false);
@@ -116,6 +121,14 @@ function ReceptionPageContent() {
     };
   }, [tenant?.id]);
 
+  // Set deposit amount from tenant settings
+  useEffect(() => {
+    if (tenant?.settings) {
+      const depAmt = (tenant.settings as any)?.deposit_amount || 0;
+      setDepositAmount(depAmt);
+    }
+  }, [tenant?.settings]);
+
   // Load URL query param scanUid if present
   useEffect(() => {
     if (scanUidParam) {
@@ -192,12 +205,12 @@ function ReceptionPageContent() {
     e.preventDefault();
     if (!tenant?.id) return;
     if (!selectedRoomId) {
-      setErrorCheckin('Lütfen bir oda seçin.');
+      setErrorCheckin(`Lütfen bir ${t.roomLabel.toLowerCase()} seçin.`);
       playBeep('error');
       return;
     }
     if (!guestName.trim()) {
-      setErrorCheckin('Lütfen misafir adını girin.');
+      setErrorCheckin(`Lütfen ${t.guestLabel.toLowerCase()} adını girin.`);
       playBeep('error');
       return;
     }
@@ -270,7 +283,26 @@ function ReceptionPageContent() {
         if (txError) throw txError;
       }
 
+      // Deposit transaction (if configured)
+      const depAmt = parseFloat(String(depositAmount));
+      if (!isNaN(depAmt) && depAmt > 0) {
+        const { error: depError } = await supabase
+          .from('transactions')
+          .insert({
+            tenant_id: tenant.id,
+            room_id: selectedRoomId,
+            guest_id: createdGuest?.id || null,
+            amount: depAmt,
+            type: 'deposit',
+            location: 'reception',
+            description: `${t.depositLabel} Tahsilatı`,
+            performed_by: profile?.id || null
+          });
+        if (depError) throw depError;
+      }
+
       playBeep('success');
+      toast({ message: `${t.checkInLabel} başarıyla tamamlandı!`, type: 'success' });
       setSuccessCheckin(true);
       setGuestName('');
       setCardUid('');
@@ -285,7 +317,8 @@ function ReceptionPageContent() {
       setTimeout(() => setSuccessCheckin(false), 3000);
     } catch (err: any) {
       console.error(err);
-      setErrorCheckin(err.message || 'Check-in yapılamadı.');
+      setErrorCheckin(err.message || 'Giriş yapılamadı.');
+      toast({ message: err.message || 'Giriş işlemi başarısız!', type: 'error' });
       playBeep('error');
     } finally {
       setLoadingCheckin(false);
@@ -297,7 +330,7 @@ function ReceptionPageContent() {
     if (!checkoutRoom || !tenant?.id) return;
     const balance = Number(checkoutRoom.wallet_balance);
     const guestInfo = checkoutGuest ? ` (${checkoutGuest.guest_name})` : '';
-    const confirmMsg = `Oda ${checkoutRoom.room_number}${guestInfo} için Check-out yapılacak ve kalan ₺${balance.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} iade edilecektir. Onaylıyor musunuz?`;
+    const confirmMsg = `${t.roomLabel} ${checkoutRoom.room_number}${guestInfo} için çıkış yapılacak ve kalan ₺${balance.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} iade edilecektir. Onaylıyor musunuz?`;
     if (!confirm(confirmMsg)) return;
 
     setLoadingCheckoutSubmit(true);
@@ -321,6 +354,24 @@ function ReceptionPageContent() {
         if (txError) throw txError;
       }
 
+      // Refund deposit if applicable
+      const tenantDepositAmt = (tenant.settings as any)?.deposit_amount || 0;
+      if (tenantDepositAmt > 0) {
+        const { error: depRefundError } = await supabase
+          .from('transactions')
+          .insert({
+            tenant_id: tenant.id,
+            room_id: checkoutRoom.id,
+            guest_id: checkoutGuest?.id || null,
+            amount: tenantDepositAmt,
+            type: 'deposit_refund',
+            location: 'reception',
+            description: `${t.depositLabel} İadesi`,
+            performed_by: profile?.id || null
+          });
+        if (depRefundError) throw depRefundError;
+      }
+
       // Update room to checked_out
       const { error: roomError } = await supabase
         .from('rooms')
@@ -341,6 +392,7 @@ function ReceptionPageContent() {
       }
 
       playBeep('success');
+      toast({ message: `${t.checkOutLabel} başarıyla tamamlandı! Bakiye ve depozito iade edildi.`, type: 'success' });
       setSuccessCheckout(true);
       setCheckoutGuest(null);
       setCheckoutRoom(null);
@@ -354,7 +406,8 @@ function ReceptionPageContent() {
       setTimeout(() => setSuccessCheckout(false), 3000);
     } catch (err: any) {
       console.error(err);
-      setErrorCheckout(err.message || 'Check-out sırasında hata oluştu.');
+      setErrorCheckout(err.message || 'Çıkış sırasında hata oluştu.');
+      toast({ message: err.message || 'Çıkış işlemi başarısız!', type: 'error' });
       playBeep('error');
     } finally {
       setLoadingCheckoutSubmit(false);
@@ -387,8 +440,8 @@ function ReceptionPageContent() {
             <ConciergeBell size={22} />
           </div>
           <div>
-            <h1 className="page-title">Resepsiyon İşlemleri</h1>
-            <p className="page-subtitle">Hızlı Giriş (Check-in), Bakiye Yükleme ve Çıkış (Check-out) Paneli</p>
+            <h1 className="page-title">{t.receptionLabel} İşlemleri</h1>
+            <p className="page-subtitle">{t.receptionDesc}</p>
           </div>
         </div>
       </div>
@@ -405,7 +458,7 @@ function ReceptionPageContent() {
           }`}
         >
           <DoorOpen size={16} />
-          Check-in Giriş
+          {t.checkInLabel}
         </button>
         <button
           type="button"
@@ -417,7 +470,7 @@ function ReceptionPageContent() {
           }`}
         >
           <LogOut size={16} />
-          Check-out Çıkış
+          {t.checkOutLabel}
         </button>
       </div>
 
@@ -430,7 +483,7 @@ function ReceptionPageContent() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)', paddingBottom: 14 }}>
             <DoorOpen size={20} style={{ color: 'var(--accent)' }} />
-            <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Hızlı Giriş & Kart Eşleme (Check-in)</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{t.checkInLabel}</h3>
           </div>
 
           {successCheckin && (
@@ -450,9 +503,9 @@ function ReceptionPageContent() {
           <form onSubmit={handleCheckinSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Room selection */}
             <div>
-              <label className="input-label">Oda Seçimi</label>
+              <label className="input-label">{t.roomLabel} Seçimi</label>
               {loadingRooms ? (
-                <div style={{ color: 'var(--muted)', fontSize: 13 }}>Odalar yükleniyor...</div>
+                <div style={{ color: 'var(--muted)', fontSize: 13 }}>{t.roomsLabel} yükleniyor...</div>
               ) : (
                 <select
                   className="input"
@@ -460,10 +513,10 @@ function ReceptionPageContent() {
                   onChange={(e) => setSelectedRoomId(e.target.value)}
                   required
                 >
-                  <option value="">-- Boş Oda Seçin --</option>
+                  <option value="">-- Boş {t.roomLabel} Seçin --</option>
                   {vacantRooms.map((room) => (
                     <option key={room.id} value={room.id}>
-                      Oda {room.room_number} (Boş)
+                      {t.roomLabel} {room.room_number} (Boş)
                     </option>
                   ))}
                 </select>
@@ -472,12 +525,12 @@ function ReceptionPageContent() {
 
             {/* Guest Name */}
             <div>
-              <label className="input-label">Misafir Adı Soyadı</label>
+              <label className="input-label">{t.guestNameLabel}</label>
               <div style={{ position: 'relative' }}>
                 <User size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
                 <input
                   className="input"
-                  placeholder="Misafir adını giriniz..."
+                  placeholder={`${t.guestLabel} adını giriniz...`}
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
                   style={{ paddingLeft: 38 }}
@@ -522,7 +575,7 @@ function ReceptionPageContent() {
 
             {/* PIN Code */}
             <div>
-              <label className="input-label">Giriş PIN Kodu (Harcama Şifresi - 4 Hane)</label>
+              <label className="input-label">{t.pinLabel} (Harcama Şifresi - 4 Hane)</label>
               <div style={{ position: 'relative' }}>
                 <Key size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
                 <input
@@ -555,6 +608,28 @@ function ReceptionPageContent() {
               </div>
             </div>
 
+            {/* Deposit Amount */}
+            {depositAmount > 0 && (
+              <div>
+                <label className="input-label">{t.depositLabel} (₺)</label>
+                <div style={{ position: 'relative' }}>
+                  <Wallet size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--warning)' }} />
+                  <input
+                    className="input"
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={depositAmount || ''}
+                    onChange={(e) => setDepositAmount(parseFloat(e.target.value) || 0)}
+                    style={{ paddingLeft: 38 }}
+                  />
+                </div>
+                <small style={{ color: 'var(--warning)', fontSize: 11, marginTop: 4, display: 'block' }}>
+                  ℹ️ {t.depositDesc} — çıkışta iade edilecektir.
+                </small>
+              </div>
+            )}
+
             <button
               type="submit"
               className="btn btn-primary"
@@ -564,12 +639,12 @@ function ReceptionPageContent() {
               {loadingCheckin ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  Giriş Kaydediliyor...
+                  İşlem Kaydediliyor...
                 </>
               ) : (
                 <>
                   <Check size={18} />
-                  Giriş İşlemini Tamamla
+                  İşlemi Tamamla
                 </>
               )}
             </button>
@@ -583,31 +658,31 @@ function ReceptionPageContent() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid var(--border)', paddingBottom: 14 }}>
             <LogOut size={20} style={{ color: 'var(--danger)' }} />
-            <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Hızlı Çıkış & Folyo (Check-out)</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{t.checkOutLabel}</h3>
           </div>
 
           {successCheckout && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', background: 'var(--success-glow)', border: '1px solid rgba(16, 185, 129, 0.2)', color: 'var(--success)', borderRadius: 12, fontSize: 14 }}>
               <Check size={18} />
-              Check-out başarıyla yapıldı. Kalan bakiye iade edildi ve kart boşa çıkarıldı!
+              İşlem başarıyla yapıldı. Kalan bakiye iade edildi ve kart boşa çıkarıldı!
             </div>
           )}
 
           {/* Select Occupied Room */}
           <div>
-            <label className="input-label">Dolu Oda Seçimi</label>
+            <label className="input-label">Aktif {t.roomLabel} Seçimi</label>
             {loadingRooms ? (
-              <div style={{ color: 'var(--muted)', fontSize: 13 }}>Odalar yükleniyor...</div>
+              <div style={{ color: 'var(--muted)', fontSize: 13 }}>{t.roomsLabel} yükleniyor...</div>
             ) : (
               <select
                 className="input"
                 value={selectedCheckoutRoomId}
                 onChange={(e) => setSelectedCheckoutRoomId(e.target.value)}
               >
-                <option value="">-- Dolu Oda Seçin --</option>
+                <option value="">-- Aktif {t.roomLabel} Seçin --</option>
                 {occupiedRooms.map((room) => (
                   <option key={room.id} value={room.id}>
-                    Oda {room.room_number} ({room.wallet_balance > 0 ? `Bakiye: ₺${Number(room.wallet_balance).toFixed(2)}` : 'Bakiye Yok'})
+                    {t.roomLabel} {room.room_number} ({room.wallet_balance > 0 ? `Bakiye: ₺${Number(room.wallet_balance).toFixed(2)}` : 'Bakiye Yok'})
                   </option>
                 ))}
               </select>
@@ -617,7 +692,7 @@ function ReceptionPageContent() {
           {loadingCheckoutData ? (
             <div style={{ padding: '40px 0', textAlign: 'center', color: 'var(--muted)' }}>
               <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 12px' }} />
-              Folyo verileri yükleniyor...
+              Detaylar yükleniyor...
             </div>
           ) : !checkoutRoom ? (
             /* Empty State */
@@ -626,7 +701,7 @@ function ReceptionPageContent() {
               padding: '60px 20px', border: '1px dashed var(--border)', borderRadius: 16, color: 'var(--muted)', textAlign: 'center'
             }}>
               <ConciergeBell size={32} style={{ opacity: 0.3, marginBottom: 12 }} />
-              <p style={{ fontSize: 13, margin: 0 }}>Harcama folyosunu görüntülemek ve çıkış işlemlerini başlatmak için yukarıdan dolu bir oda seçin.</p>
+              <p style={{ fontSize: 13, margin: 0 }}>Harcama detaylarını görüntülemek ve çıkış işlemlerini başlatmak için yukarıdan aktif bir {t.roomLabel.toLowerCase()} seçin.</p>
             </div>
           ) : (
             /* Occupied Room details and Folio */
@@ -635,20 +710,20 @@ function ReceptionPageContent() {
               <div id="print-section" className="glass-card" style={{ padding: 16, background: 'rgba(0,0,0,0.15)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 16 }}>
                 {/* Folio Print Header (Only visible during print) */}
                 <div className="print-header" style={{ display: 'none', borderBottom: '2px solid #000', paddingBottom: 10, marginBottom: 16 }}>
-                  <div style={{ fontSize: 20, fontWeight: 'bold', textAlign: 'center' }}>{tenant?.name || 'RFID POS HOTEL'}</div>
+                  <div style={{ fontSize: 20, fontWeight: 'bold', textAlign: 'center' }}>{tenant?.name || `RFID POS ${t.tenantLabel.toUpperCase()}`}</div>
                   <div style={{ fontSize: 12, textAlign: 'center', color: '#666' }}>{tenant?.address || ''} • {tenant?.phone || ''}</div>
-                  <div style={{ fontSize: 14, fontWeight: 'bold', textAlign: 'center', marginTop: 10 }}>MİSAFİR ADİSYON DETAYI (FOLYO)</div>
+                  <div style={{ fontSize: 14, fontWeight: 'bold', textAlign: 'center', marginTop: 10 }}>ADİSYON DETAYI (FOLYO)</div>
                 </div>
 
                 {/* Info block */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 13, marginBottom: 14 }}>
                   <div>
-                    <span style={{ color: 'var(--muted)', display: 'block', fontSize: 11, textTransform: 'uppercase' }}>Misafir Adı</span>
-                    <strong style={{ fontSize: 14 }}>{checkoutGuest?.guest_name || 'Kayıtsız Misafir'}</strong>
+                    <span style={{ color: 'var(--muted)', display: 'block', fontSize: 11, textTransform: 'uppercase' }}>{t.guestLabel} Adı</span>
+                    <strong style={{ fontSize: 14 }}>{checkoutGuest?.guest_name || `Kayıtsız ${t.guestLabel}`}</strong>
                   </div>
                   <div>
-                    <span style={{ color: 'var(--muted)', display: 'block', fontSize: 11, textTransform: 'uppercase' }}>Oda / Kart</span>
-                    <strong style={{ fontSize: 14 }}>Oda {checkoutRoom.room_number} <span style={{ fontSize: 12, color: 'var(--accent)', fontFamily: 'monospace' }}>({checkoutGuest?.card_uid || 'Kart Yok'})</span></strong>
+                    <span style={{ color: 'var(--muted)', display: 'block', fontSize: 11, textTransform: 'uppercase' }}>{t.roomLabel} / Kart</span>
+                    <strong style={{ fontSize: 14 }}>{t.roomLabel} {checkoutRoom.room_number} <span style={{ fontSize: 12, color: 'var(--accent)', fontFamily: 'monospace' }}>({checkoutGuest?.card_uid || 'Kart Yok'})</span></strong>
                   </div>
                 </div>
 
@@ -657,7 +732,7 @@ function ReceptionPageContent() {
                   background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(99, 102, 241, 0.02))',
                   border: '1px solid rgba(99, 102, 241, 0.15)', borderRadius: 12, padding: '12px 16px', textAlign: 'center', marginBottom: 16
                 }}>
-                  <span style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Cüzdan Bakiyesi (İade Edilecek)</span>
+                  <span style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>{t.roomBalanceLabel} (İade Edilecek)</span>
                   <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--success)', fontFamily: 'monospace', marginTop: 4 }}>
                     ₺{Number(checkoutRoom.wallet_balance).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                   </div>
@@ -678,7 +753,7 @@ function ReceptionPageContent() {
                       <tbody>
                         {checkoutTransactions.length === 0 ? (
                           <tr>
-                            <td colSpan={3} style={{ padding: 12, textAlign: 'center', color: 'var(--muted)' }}>Bu odaya ait işlem geçmişi yok.</td>
+                            <td colSpan={3} style={{ padding: 12, textAlign: 'center', color: 'var(--muted)' }}>Bu hesaba ait işlem geçmişi yok.</td>
                           </tr>
                         ) : (
                           checkoutTransactions.map((tx) => (
@@ -709,18 +784,18 @@ function ReceptionPageContent() {
                 <div className="print-footer" style={{ display: 'none', marginTop: 30, borderTop: '1px dashed #999', paddingTop: 16 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
                     <div>
-                      <div>Misafir İmzası:</div>
+                      <div>{t.guestLabel} İmzası:</div>
                       <div style={{ height: 40 }}></div>
                       <div>_____________________</div>
                     </div>
                     <div>
-                      <div>Resepsiyon Görevlisi:</div>
+                      <div>Görevli İmzası:</div>
                       <div style={{ height: 40 }}></div>
                       <div>_____________________</div>
                     </div>
                   </div>
                   <div style={{ textAlign: 'center', fontSize: 10, color: '#999', marginTop: 20 }}>
-                    RFID POS Otel Otomasyonu üzerinden yazdırılmıştır. İyi yolculuklar dileriz!
+                    RFID POS {t.tenantLabel} Otomasyonu üzerinden yazdırılmıştır.
                   </div>
                 </div>
               </div>
@@ -751,7 +826,7 @@ function ReceptionPageContent() {
                   ) : (
                     <LogOut size={16} />
                   )}
-                  Çıkış Yap & Kartı Bırak
+                  {t.roomLabel === 'Oda' ? 'Çıkış Yap & Kartı Bırak' : 'Kartı İade Al & Kapat'}
                 </button>
               </div>
 

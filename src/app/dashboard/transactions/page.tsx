@@ -8,10 +8,12 @@ import {
 import { useAuth } from '../../../contexts/AuthContext';
 import { createClient } from '../../../utils/supabase';
 import { Transaction } from '../../../types';
+import { useTerminology } from '../../../hooks/useTerminology';
 
 export default function TransactionsPage() {
   const { tenant } = useAuth();
   const supabase = createClient();
+  const t = useTerminology();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -75,7 +77,7 @@ export default function TransactionsPage() {
 
   const handleExport = () => {
     const csvRows = [
-      ['Tarih', 'Oda', 'Misafir', 'Tür', 'Lokasyon', 'Tutar'].join(','),
+      ['Tarih', t.roomLabel, t.guestLabel, 'Tür', 'Lokasyon', 'Tutar'].join(','),
       ...transactions.map(tx => [
         new Date(tx.created_at).toLocaleString('tr-TR'),
         (tx as any).room?.room_number || '',
@@ -153,56 +155,58 @@ export default function TransactionsPage() {
             <p>İşlem bulunamadı</p>
           </div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Tarih</th>
-                <th>Oda</th>
-                <th>Misafir</th>
-                <th>Tür</th>
-                <th>Lokasyon</th>
-                <th>Senkron</th>
-                <th style={{ textAlign: 'right' }}>Tutar</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map((tx) => {
-                const info = txTypeInfo(tx.type);
-                return (
-                  <tr key={tx.id}>
-                    <td>
-                      <div style={{ fontSize: 13 }}>
-                        {new Date(tx.created_at).toLocaleString('tr-TR', {
-                          day: '2-digit', month: '2-digit', year: '2-digit',
-                          hour: '2-digit', minute: '2-digit',
-                        })}
-                      </div>
-                    </td>
-                    <td>
-                      <span className="badge badge-muted">
-                        <DoorOpen size={12} />
-                        {(tx as any).room?.room_number || '—'}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: 13 }}>{(tx as any).guest?.guest_name || '—'}</td>
-                    <td><span className={`badge ${info.badge}`}>{info.icon} {info.label}</span></td>
-                    <td style={{ fontSize: 13, color: 'var(--muted)' }}>{tx.location}</td>
-                    <td>
-                      {tx.is_synced
-                        ? <span className="badge badge-success" style={{ fontSize: 11 }}>✓</span>
-                        : <span className="badge badge-warning" style={{ fontSize: 11 }}>Bekliyor</span>
-                      }
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                      <span style={{ color: tx.type === 'charge' ? 'var(--danger)' : 'var(--success)' }}>
-                        {tx.type === 'charge' ? '-' : '+'}₺{Number(tx.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Tarih</th>
+                  <th>{t.roomLabel}</th>
+                  <th>{t.guestLabel}</th>
+                  <th>Tür</th>
+                  <th>Lokasyon</th>
+                  <th>Senkron</th>
+                  <th style={{ textAlign: 'right' }}>Tutar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.map((tx) => {
+                  const info = txTypeInfo(tx.type);
+                  return (
+                    <tr key={tx.id}>
+                      <td>
+                        <div style={{ fontSize: 13 }}>
+                          {new Date(tx.created_at).toLocaleString('tr-TR', {
+                            day: '2-digit', month: '2-digit', year: '2-digit',
+                            hour: '2-digit', minute: '2-digit',
+                          })}
+                        </div>
+                      </td>
+                      <td>
+                        <span className="badge badge-muted">
+                          <DoorOpen size={12} />
+                          {(tx as any).room?.room_number || '—'}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 13 }}>{(tx as any).guest?.guest_name || '—'}</td>
+                      <td><span className={`badge ${info.badge}`}>{info.icon} {info.label}</span></td>
+                      <td style={{ fontSize: 13, color: 'var(--muted)' }}>{tx.location}</td>
+                      <td>
+                        {tx.is_synced
+                          ? <span className="badge badge-success" style={{ fontSize: 11 }}>✓</span>
+                          : <span className="badge badge-warning" style={{ fontSize: 11 }}>Bekliyor</span>
+                        }
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                        <span style={{ color: tx.type === 'charge' ? 'var(--danger)' : 'var(--success)' }}>
+                          {tx.type === 'charge' ? '-' : '+'}₺{Number(tx.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

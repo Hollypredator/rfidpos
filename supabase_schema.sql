@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS rooms (
     wallet_balance NUMERIC(12, 2) NOT NULL DEFAULT 0.00 CHECK (wallet_balance >= 0.00),
     pin_code VARCHAR(4) NOT NULL CHECK (pin_code ~ '^[0-9]{4}$'),
     status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'occupied', 'maintenance', 'checked_out')),
+    daily_limit NUMERIC(12, 2) DEFAULT 0.00,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT unique_tenant_room UNIQUE(tenant_id, room_number)
 );

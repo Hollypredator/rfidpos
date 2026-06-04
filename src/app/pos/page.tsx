@@ -39,6 +39,7 @@ import { useSync } from '../../hooks/useSync';
 import { Room, Guest, Transaction } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useTerminology } from '../../hooks/useTerminology';
 import BillingLockScreen from '../../components/BillingLockScreen';
 
 // POS Product Definition
@@ -78,6 +79,7 @@ export default function POSPage() {
   const { tenant, profile, signOut, isLoading } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
+  const t = useTerminology();
   const tenantId = tenant?.id || 'mock-tenant-id';
 
   useEffect(() => {
@@ -274,6 +276,19 @@ export default function POSPage() {
     refreshLocalState();
   }, [syncQueueCount]);
 
+  // Play sound when online/offline state changes
+  const prevOnlineRef = useRef<boolean>(true);
+  useEffect(() => {
+    if (isOnline !== prevOnlineRef.current) {
+      if (isOnline) {
+        playBeep('success');
+      } else {
+        playBeep('error');
+      }
+      prevOnlineRef.current = isOnline;
+    }
+  }, [isOnline]);
+
   const isExpired = tenant?.subscription_expires_at ? new Date(tenant.subscription_expires_at) < new Date() : false;
   const showLockScreen = profile?.role !== 'super_admin' && (tenant?.status !== 'active' || isExpired);
 
@@ -292,17 +307,30 @@ export default function POSPage() {
   // Mock-seeding data in case user doesn't have Supabase configured yet
   const handleSeedData = async () => {
     try {
+      const isEntertainment = (tenant?.settings as any)?.business_type === 'entertainment';
       const sampleTenants = [
-        { id: tenantId, name: tenant?.name || 'Grand Antigravity Resort & Spa', status: 'active' }
+        { 
+          id: tenantId, 
+          name: tenant?.name || (isEntertainment ? 'Funtasia Eğlence Merkezi' : 'Grand Antigravity Resort & Spa'), 
+          status: 'active',
+          settings: tenant?.settings || (isEntertainment ? { business_type: 'entertainment', daily_spending_limit: 1000 } : { business_type: 'hotel' })
+        }
       ];
-      const sampleRooms: Room[] = [
+      const sampleRooms: Room[] = isEntertainment ? [
+        { id: 'room-201', tenant_id: tenantId, room_number: '201', wallet_balance: 500.00, pin_code: '1234', status: 'occupied' },
+        { id: 'room-202', tenant_id: tenantId, room_number: '202', wallet_balance: 150.00, pin_code: '4321', status: 'occupied' },
+        { id: 'room-203', tenant_id: tenantId, room_number: '203', wallet_balance: 0.00, pin_code: '0000', status: 'active' }
+      ] : [
         { id: 'room-101', tenant_id: tenantId, room_number: '101', wallet_balance: 1500.00, pin_code: '1234', status: 'occupied' },
         { id: 'room-102', tenant_id: tenantId, room_number: '102', wallet_balance: 350.00, pin_code: '4321', status: 'occupied' },
         { id: 'room-103', tenant_id: tenantId, room_number: '103', wallet_balance: 0.00, pin_code: '0000', status: 'active' },
         { id: 'room-104', tenant_id: tenantId, room_number: '104', wallet_balance: 4200.00, pin_code: '2580', status: 'occupied' },
         { id: 'room-105', tenant_id: tenantId, room_number: '105', wallet_balance: 120.00, pin_code: '9876', status: 'maintenance' }
       ];
-      const sampleGuests: Guest[] = [
+      const sampleGuests: Guest[] = isEntertainment ? [
+        { id: 'guest-201', room_id: 'room-201', guest_name: 'Alp Eren', card_uid: 'E1E2E3E4', status: 'active' },
+        { id: 'guest-202', room_id: 'room-202', guest_name: 'Selin Yılmaz', card_uid: 'D1D2D3D4', status: 'active' }
+      ] : [
         { id: 'guest-1', room_id: 'room-101', guest_name: 'Can Yılmaz', card_uid: 'A1B2C3D4', status: 'active' },
         { id: 'guest-2', room_id: 'room-102', guest_name: 'Merve Kaya', card_uid: 'E5F6G7H8', status: 'active' },
         { id: 'guest-3', room_id: 'room-104', guest_name: 'John Doe', card_uid: '90ABCDEF', status: 'active' }
@@ -312,7 +340,9 @@ export default function POSPage() {
       await OfflineDBService.bulkUpsert('rooms', sampleRooms);
       await OfflineDBService.bulkUpsert('guests', sampleGuests);
       
-      alert('Local IndexedDB successfully initialized with active hotel, rooms, guests, and card UIDs!');
+      alert(isEntertainment 
+        ? 'Yerel veri tabanı Funtasia Eğlence Merkezi (Bileklikler, müşteriler ve kart UID\'leri) ile başarıyla kuruldu!'
+        : 'Local IndexedDB successfully initialized with active hotel, rooms, guests, and card UIDs!');
       refreshLocalState();
     } catch (err: any) {
       alert('Failed to initialize local data: ' + err.message);
@@ -438,13 +468,31 @@ export default function POSPage() {
       
       const room = await OfflineDBService.getById<Room>('rooms', guest.room_id);
       if (!room) {
-        throw new Error('Oda cüzdanı bulunamadı.');
+        throw new Error(`${t.roomLabel} cüzdanı bulunamadı.`);
       }
       if (room.status !== 'active' && room.status !== 'occupied') {
-        throw new Error(`Oda aktif değil (Durum: ${room.status})`);
+        throw new Error(`${t.roomLabel} aktif değil (Durum: ${room.status})`);
       }
 
       if (txType === 'charge') {
+        // Daily spending limit check
+        const tenantLimit = (tenant?.settings as any)?.daily_spending_limit;
+        const limitToUse = (room.daily_limit && Number(room.daily_limit) > 0)
+          ? Number(room.daily_limit)
+          : (tenantLimit ? Number(tenantLimit) : 0);
+
+        if (limitToUse > 0) {
+          const allTxs = await OfflineDBService.getAll<Transaction>('transactions');
+          const todayStr = new Date().toISOString().split('T')[0];
+          const spentToday = allTxs
+            .filter(t => t.room_id === room.id && t.type === 'charge' && t.created_at.startsWith(todayStr))
+            .reduce((sum, t) => sum + Number(t.amount), 0);
+
+          if (spentToday + Number(amount) > limitToUse) {
+            throw new Error(`Günlük harcama limiti aşıldı! (Limit: ₺${limitToUse.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}, Bugün harcanan: ₺${spentToday.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}, Denenen: ₺${Number(amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })})`);
+          }
+        }
+
         // Check balance in cents to avoid JS floating point bugs (e.g. 662.50 < 662.50 evaluation)
         const balanceCents = Math.round(Number(room.wallet_balance) * 100);
         const amountCents = Math.round(Number(amount) * 100);
@@ -610,7 +658,7 @@ export default function POSPage() {
               <option value="restaurant" className="bg-card text-foreground">Restaurant POS</option>
               <option value="bar" className="bg-card text-foreground">Lobby Bar POS</option>
               <option value="spa" className="bg-card text-foreground">SPA & Wellness</option>
-              <option value="reception" className="bg-card text-foreground">Resepsiyon Cüzdan</option>
+              <option value="reception" className="bg-card text-foreground">{t.receptionLabel}</option>
             </select>
           </div>
         </div>
@@ -1129,14 +1177,14 @@ export default function POSPage() {
             <h3 className="text-xs font-bold text-muted uppercase tracking-wider mb-2">Simüle Edilebilir Test RFID Kartları:</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               {localGuests.length === 0 ? (
-                <p className="text-muted italic text-[11px] p-2">Yerel misafir/kart verisi bulunamadı.</p>
+                <p className="text-muted italic text-[11px] p-2">Yerel {t.guestLabel.toLowerCase()}/kart verisi bulunamadı.</p>
               ) : (
                 localGuests.map(g => {
                   const room = localRooms.find(r => r.id === g.room_id);
                   return (
                     <div key={g.id} className="bg-background p-2.5 rounded-xl border border-border flex justify-between items-center">
-                      <div>
-                        <p className="font-bold text-foreground">{g.guest_name} (Oda {room?.room_number || '?'})</p>
+                       <div>
+                        <p className="font-bold text-foreground">{g.guest_name} ({t.roomLabel} {room?.room_number || '?'})</p>
                         <p className="text-[10px] text-muted">UID: {g.card_uid}</p>
                       </div>
                       <span className={`font-bold px-1.5 py-0.5 rounded text-[10px] border ${
@@ -1160,15 +1208,15 @@ export default function POSPage() {
           <div className="bg-card border border-border rounded-2xl p-4">
             <h4 className="text-sm font-bold text-foreground flex items-center gap-2 mb-3 border-b border-border pb-2">
               <Home size={16} className="text-indigo-400" />
-              Yerel Oda Bakiyeleri (Cache)
+              Yerel {t.roomLabel} Bakiyeleri (Cache)
             </h4>
             <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
               {localRooms.length === 0 ? (
-                <p className="text-xs text-muted italic p-2">Yerel oda verisi yok. Yukardaki butondan seet edebilirsiniz.</p>
+                <p className="text-xs text-muted italic p-2">Yerel {t.roomLabel.toLowerCase()} verisi yok. Yukarıdaki butondan yükleyebilirsiniz.</p>
               ) : (
                 localRooms.map(r => (
                   <div key={r.id} className="flex justify-between items-center bg-background border border-border/50 p-2 rounded-lg text-xs">
-                    <span className="font-bold text-foreground">Oda {r.room_number}</span>
+                    <span className="font-bold text-foreground">{t.roomLabel} {r.room_number}</span>
                     <span className={`font-mono font-extrabold ${r.wallet_balance > 50 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
                       ₺{Number(r.wallet_balance).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
                     </span>
@@ -1182,11 +1230,11 @@ export default function POSPage() {
           <div className="bg-card border border-border rounded-2xl p-4">
             <h4 className="text-sm font-bold text-foreground flex items-center gap-2 mb-3 border-b border-border pb-2">
               <UserCheck size={16} className="text-indigo-400" />
-              Tanımlı Kartlar / Misafirler
+              Tanımlı Kartlar / {t.guestsLabel}
             </h4>
             <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
               {localGuests.length === 0 ? (
-                <p className="text-xs text-muted italic p-2">Yerel misafir verisi yok.</p>
+                <p className="text-xs text-muted italic p-2">Yerel {t.guestLabel.toLowerCase()} verisi yok.</p>
               ) : (
                 localGuests.map(g => (
                   <div key={g.id} className="flex justify-between items-center bg-background border border-border/50 p-2 rounded-lg text-xs">
@@ -1195,7 +1243,7 @@ export default function POSPage() {
                       <p className="text-[10px] text-muted">UID: {g.card_uid}</p>
                     </div>
                     <span className="text-[10px] bg-accent-glow border border-accent/20 text-indigo-650 dark:text-indigo-455 px-1.5 py-0.5 rounded font-mono">
-                      Oda {(localRooms.find(r => r.id === g.room_id))?.room_number || '?'}
+                      {t.roomLabel} {(localRooms.find(r => r.id === g.room_id))?.room_number || '?'}
                     </span>
                   </div>
                 ))
@@ -1219,7 +1267,7 @@ export default function POSPage() {
                   return (
                     <div key={tx.id} className="bg-background border border-border/50 p-2.5 rounded-lg text-xs space-y-1">
                       <div className="flex justify-between items-center">
-                        <span className="font-bold text-foreground">Oda {room?.room_number || '?'} ({guest?.guest_name || 'Misafir'})</span>
+                        <span className="font-bold text-foreground">{t.roomLabel} {room?.room_number || '?'} ({guest?.guest_name || t.guestLabel})</span>
                         <span className="font-mono font-bold text-red-500 dark:text-red-400">-{tx.type === 'topup' ? '+' : ''}₺{Number(tx.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between items-center text-[10px] text-muted">
@@ -1250,7 +1298,7 @@ export default function POSPage() {
 
             <div className="flex justify-between items-center mb-6 relative">
               <h3 className="text-lg font-bold text-foreground">
-                {paymentStatus === 'entering_pin' ? 'Oda PIN Doğrulama' : 'Kart Teması Bekleniyor'}
+                {paymentStatus === 'entering_pin' ? `${t.roomLabel} PIN Doğrulama` : 'Kart Teması Bekleniyor'}
               </h3>
               <button 
                 onClick={() => {
@@ -1270,8 +1318,8 @@ export default function POSPage() {
                 // PIN PAD INTERFACE
                 <div className="w-full flex flex-col items-center">
                   <div className="bg-accent-glow px-4 py-2 rounded-2xl border border-accent/20 mb-2 max-w-sm text-center">
-                    <p className="text-indigo-650 dark:text-indigo-400 font-bold text-xs tracking-wider uppercase">Misafir Bilgileri</p>
-                    <p className="text-foreground text-sm font-semibold mt-0.5">Oda {tempRoomNumber} &bull; {tempGuestName}</p>
+                    <p className="text-indigo-650 dark:text-indigo-400 font-bold text-xs tracking-wider uppercase">{t.guestLabel} Bilgileri</p>
+                    <p className="text-foreground text-sm font-semibold mt-0.5">{t.roomLabel} {tempRoomNumber} &bull; {tempGuestName}</p>
                   </div>
 
                   <p className="text-xs text-muted font-medium px-4 mb-4">
@@ -1362,12 +1410,12 @@ export default function POSPage() {
                   {paymentStatus === 'success' && lastPaymentResult && (
                     <div className="mt-6 p-4 bg-background border border-border rounded-2xl w-full text-xs text-left space-y-2">
                       <div className="flex justify-between">
-                        <span className="text-muted">Misafir Adı:</span>
+                        <span className="text-muted">{t.guestLabel} Adı:</span>
                         <span className="font-bold text-foreground">{lastPaymentResult.guestName}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted">Oda No:</span>
-                        <span className="font-bold text-foreground">Oda {lastPaymentResult.roomNumber}</span>
+                        <span className="text-muted">{t.roomNoLabel}:</span>
+                        <span className="font-bold text-foreground">{t.roomLabel} {lastPaymentResult.roomNumber}</span>
                       </div>
                       <div className="flex justify-between border-t border-border pt-2">
                         <span className="text-muted">{directTxType === 'topup' ? 'Yüklenen:' : 'Harcama:'}</span>
@@ -1429,7 +1477,7 @@ export default function POSPage() {
                           onClick={() => processCardScan(g.card_uid)}
                           className="bg-cardHover hover:bg-card text-foreground px-2.5 py-1.5 rounded-lg text-[10px] font-bold transition-all border border-border"
                         >
-                          {g.guest_name} (Oda {room?.room_number || '?'})
+                          {g.guest_name} ({t.roomLabel} {room?.room_number || '?'})
                         </button>
                       );
                     })

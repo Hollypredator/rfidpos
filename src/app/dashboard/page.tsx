@@ -17,9 +17,11 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { createClient } from '../../utils/supabase';
 import { DashboardStats, Transaction, Room } from '../../types';
+import { useTerminology } from '../../hooks/useTerminology';
 
 export default function DashboardPage() {
   const { tenant, profile } = useAuth();
+  const t = useTerminology();
   const [stats, setStats] = useState<DashboardStats>({
     totalRooms: 0, occupiedRooms: 0, totalBalance: 0,
     todayTransactions: 0, todayRevenue: 0, activeGuests: 0,
@@ -119,7 +121,7 @@ export default function DashboardPage() {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 className="page-title">Hoş Geldiniz 👋</h1>
-          <p className="page-subtitle">{tenant?.name || 'Otel'} — Genel Bakış</p>
+          <p className="page-subtitle">{tenant?.name || t.tenantLabel} — Genel Bakış</p>
         </div>
         <button className="btn btn-ghost btn-sm" onClick={fetchDashboardData} disabled={isLoading}>
           {isLoading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
@@ -153,18 +155,18 @@ export default function DashboardPage() {
         <div className="stat-card warning">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Odalar</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>{t.roomsLabel}</div>
               <div style={{ fontSize: 24, fontWeight: 800 }}>{stats.occupiedRooms} / {stats.totalRooms}</div>
             </div>
             <DoorOpen size={20} style={{ color: 'var(--warning)' }} />
           </div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>Dolu / Toplam</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>{t.occupiedRoomsLabel} / {t.totalRoomsLabel}</div>
         </div>
 
         <div className="stat-card danger">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>Aktif Misafir</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>{t.activeGuestsLabel}</div>
               <div style={{ fontSize: 24, fontWeight: 800 }}>{stats.activeGuests}</div>
             </div>
             <Users size={20} style={{ color: 'var(--danger)' }} />
@@ -192,49 +194,51 @@ export default function DashboardPage() {
             <p>Henüz işlem kaydı bulunmuyor</p>
           </div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Tarih</th>
-                <th>Oda</th>
-                <th>Tür</th>
-                <th>Lokasyon</th>
-                <th style={{ textAlign: 'right' }}>Tutar</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentTxs.map((tx) => {
-                const typeInfo = txTypeLabel(tx.type);
-                return (
-                  <tr key={tx.id}>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Clock size={13} style={{ color: 'var(--muted)' }} />
-                        <span style={{ fontSize: 13 }}>{new Date(tx.created_at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="badge badge-muted">
-                        {(tx as any).room?.room_number || tx.room_id.slice(0, 8)}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: typeInfo.color, fontSize: 13 }}>
-                        {typeInfo.icon}
-                        {typeInfo.label}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: 13, color: 'var(--muted)' }}>{tx.location}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600, fontSize: 14 }}>
-                      <span style={{ color: tx.type === 'charge' ? 'var(--danger)' : 'var(--success)' }}>
-                        {tx.type === 'charge' ? '-' : '+'}₺{Number(tx.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Tarih</th>
+                  <th>{t.roomLabel}</th>
+                  <th>Tür</th>
+                  <th>Lokasyon</th>
+                  <th style={{ textAlign: 'right' }}>Tutar</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentTxs.map((tx) => {
+                  const typeInfo = txTypeLabel(tx.type);
+                  return (
+                    <tr key={tx.id}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Clock size={13} style={{ color: 'var(--muted)' }} />
+                          <span style={{ fontSize: 13 }}>{new Date(tx.created_at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="badge badge-muted">
+                          {(tx as any).room?.room_number || tx.room_id.slice(0, 8)}
+                        </span>
+                      </td>
+                      <td>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: typeInfo.color, fontSize: 13 }}>
+                          {typeInfo.icon}
+                          {typeInfo.label}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: 13, color: 'var(--muted)' }}>{tx.location}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 600, fontSize: 14 }}>
+                        <span style={{ color: tx.type === 'charge' ? 'var(--danger)' : 'var(--success)' }}>
+                          {tx.type === 'charge' ? '-' : '+'}₺{Number(tx.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

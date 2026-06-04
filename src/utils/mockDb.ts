@@ -122,11 +122,11 @@ const DEFAULT_DATA: MockSchema = {
     { id: 'loc-spa', tenant_id: DEFAULT_TENANT_ID, name: 'Spa', slug: 'spa', icon: 'Sparkles', is_active: true, created_at: new Date().toISOString() },
   ],
   rooms: [
-    { id: 'room-101', tenant_id: DEFAULT_TENANT_ID, room_number: '101', wallet_balance: 1500, pin_code: '1234', status: 'occupied', created_at: new Date().toISOString() },
-    { id: 'room-102', tenant_id: DEFAULT_TENANT_ID, room_number: '102', wallet_balance: 350, pin_code: '4321', status: 'occupied', created_at: new Date().toISOString() },
-    { id: 'room-103', tenant_id: DEFAULT_TENANT_ID, room_number: '103', wallet_balance: 0, pin_code: '0000', status: 'active', created_at: new Date().toISOString() },
-    { id: 'room-104', tenant_id: DEFAULT_TENANT_ID, room_number: '104', wallet_balance: 4200, pin_code: '2580', status: 'occupied', created_at: new Date().toISOString() },
-    { id: 'room-105', tenant_id: DEFAULT_TENANT_ID, room_number: '105', wallet_balance: 120, pin_code: '9876', status: 'maintenance', created_at: new Date().toISOString() },
+    { id: 'room-101', tenant_id: DEFAULT_TENANT_ID, room_number: '101', wallet_balance: 1500, pin_code: '1234', status: 'occupied', daily_limit: 0, created_at: new Date().toISOString() },
+    { id: 'room-102', tenant_id: DEFAULT_TENANT_ID, room_number: '102', wallet_balance: 350, pin_code: '4321', status: 'occupied', daily_limit: 0, created_at: new Date().toISOString() },
+    { id: 'room-103', tenant_id: DEFAULT_TENANT_ID, room_number: '103', wallet_balance: 0, pin_code: '0000', status: 'active', daily_limit: 0, created_at: new Date().toISOString() },
+    { id: 'room-104', tenant_id: DEFAULT_TENANT_ID, room_number: '104', wallet_balance: 4200, pin_code: '2580', status: 'occupied', daily_limit: 0, created_at: new Date().toISOString() },
+    { id: 'room-105', tenant_id: DEFAULT_TENANT_ID, room_number: '105', wallet_balance: 120, pin_code: '9876', status: 'maintenance', daily_limit: 0, created_at: new Date().toISOString() },
   ],
   guests: [
     { id: 'guest-1', room_id: 'room-101', guest_name: 'Can Yılmaz', card_uid: 'A1B2C3D4', status: 'active', created_at: new Date().toISOString() },

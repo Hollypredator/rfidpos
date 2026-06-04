@@ -8,10 +8,12 @@ import {
 import { useAuth } from '../../../contexts/AuthContext';
 import { createClient } from '../../../utils/supabase';
 import { Transaction, Room } from '../../../types';
+import { useTerminology } from '../../../hooks/useTerminology';
 
 export default function ReportsPage() {
   const { tenant } = useAuth();
   const supabase = createClient();
+  const t = useTerminology();
 
   const [isLoading, setIsLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -80,10 +82,15 @@ export default function ReportsPage() {
   const charges = transactions.filter(t => t.type === 'charge');
   const topups = transactions.filter(t => t.type === 'topup');
   const refunds = transactions.filter(t => t.type === 'refund');
+  const deposits = transactions.filter(t => t.type === 'deposit');
+  const depositRefunds = transactions.filter(t => t.type === 'deposit_refund');
 
   const totalCharges = charges.reduce((s, t) => s + Number(t.amount), 0);
   const totalTopups = topups.reduce((s, t) => s + Number(t.amount), 0);
   const totalRefunds = refunds.reduce((s, t) => s + Number(t.amount), 0);
+  const totalDeposits = deposits.reduce((s, t) => s + Number(t.amount), 0);
+  const totalDepositRefunds = depositRefunds.reduce((s, t) => s + Number(t.amount), 0);
+  const netDeposits = totalDeposits - totalDepositRefunds;
 
   const averageCharge = charges.length > 0 ? (totalCharges / charges.length) : 0;
   const transactionCount = transactions.length;
@@ -243,7 +250,7 @@ export default function ReportsPage() {
                   <ArrowDownRight size={18} />
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>Müşteri başına ort. sepet</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>{t.guestLabel} başına ort. sepet</div>
             </div>
 
             <div className="stat-card warning" style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.05), rgba(0,0,0,0.2))' }}>
@@ -257,6 +264,21 @@ export default function ReportsPage() {
                 </div>
               </div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>Check-out iadeleri dahil</div>
+            </div>
+
+            <div className="stat-card accent" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.05), rgba(0,0,0,0.2))' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Eldeki Net {t.depositLabel}</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, marginTop: 4 }}>₺{netDeposits.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}</div>
+                </div>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(99,102,241,0.1)', display: 'flex', alignItems: 'center', color: 'var(--accent)', flexShrink: 0, justifyContent: 'center' }}>
+                  <ShieldCheck size={18} />
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
+                Alınan: ₺{totalDeposits.toLocaleString('tr-TR')} | İade: ₺{totalDepositRefunds.toLocaleString('tr-TR')}
+              </div>
             </div>
 
           </div>
@@ -386,7 +408,7 @@ export default function ReportsPage() {
           <div className="glass-card" style={{ padding: 20 }}>
             <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
               <Award size={16} style={{ color: 'var(--warning)' }} />
-              En Çok Harcama Yapan Odalar Sıralaması
+              En Çok Harcama Yapan {t.roomsLabel} Sıralaması
             </h3>
             
             {topRooms.length === 0 ? (
@@ -394,13 +416,14 @@ export default function ReportsPage() {
                 Kayıtlı harcama verisi bulunmuyor.
               </div>
             ) : (
+            <div className="table-responsive">
               <table className="data-table" style={{ marginTop: 0 }}>
                 <thead>
                   <tr>
                     <th style={{ width: 60 }}>Sıra</th>
-                    <th>Oda Numarası</th>
+                    <th>{t.roomNoLabel}</th>
                     <th>İşlem Adedi</th>
-                    <th>Mevcut Oda Bakiyesi</th>
+                    <th>Mevcut {t.roomLabel} Bakiyesi</th>
                     <th style={{ textAlign: 'right' }}>Toplam Harcama Tutar</th>
                   </tr>
                 </thead>
@@ -419,7 +442,7 @@ export default function ReportsPage() {
                         </span>
                       </td>
                       <td>
-                        <span style={{ fontWeight: 600 }}>Oda {room.roomNo}</span>
+                        <span style={{ fontWeight: 600 }}>{t.roomLabel} {room.roomNo}</span>
                       </td>
                       <td>{room.count} harcama</td>
                       <td style={{ color: 'var(--muted)', fontFamily: 'monospace' }}>
@@ -432,6 +455,7 @@ export default function ReportsPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
             )}
           </div>
 

@@ -182,3 +182,111 @@ VALUES
   ('f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1', 'b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b0b0', 'John Doe', 'B5C6D7E8', 'active'),
   ('f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'Merve Kaya', 'E5F6G7H8', 'active')
 ON CONFLICT (id) DO NOTHING;
+
+-- ══════════════════════════════════════════════
+-- FUNTASIA ENTERTAINMENT CENTER DEMO SEEDING
+-- ══════════════════════════════════════════════
+
+-- 1. Create Funtasia Tenant
+INSERT INTO public.tenants (id, name, slug, status, subscription_plan, subscription_expires_at, settings)
+VALUES (
+  '99999999-9999-9999-9999-999999999999', 
+  'Funtasia Eğlence Merkezi', 
+  'funtasia-eglence', 
+  'active', 
+  'pro', 
+  NOW() + INTERVAL '1 year',
+  '{"business_type": "entertainment", "daily_spending_limit": 1000}'::jsonb
+)
+ON CONFLICT (id) DO UPDATE 
+SET name = EXCLUDED.name, settings = EXCLUDED.settings;
+
+-- 2. Create Funtasia Users (Auth)
+-- Admin: fun_admin@hotelpos.com
+INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud, confirmation_token)
+VALUES (
+  '11112222-3333-4444-5555-666677778888',
+  '00000000-0000-0000-0000-000000000000',
+  'fun_admin@hotelpos.com',
+  crypt('demo1234', gen_salt('bf', 10)),
+  NOW(),
+  '{"provider":"email","providers":["email"]}',
+  '{"full_name":"Funtasia Yönetici","role":"hotel_admin"}',
+  NOW(),
+  NOW(),
+  'authenticated',
+  'authenticated',
+  ''
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Receptionist/Kasa: fun_kasa@hotelpos.com
+INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud, confirmation_token)
+VALUES (
+  '11112222-3333-4444-5555-666677779999',
+  '00000000-0000-0000-0000-000000000000',
+  'fun_kasa@hotelpos.com',
+  crypt('demo1234', gen_salt('bf', 10)),
+  NOW(),
+  '{"provider":"email","providers":["email"]}',
+  '{"full_name":"Funtasia Kasa Görevlisi","role":"receptionist"}',
+  NOW(),
+  NOW(),
+  'authenticated',
+  'authenticated',
+  ''
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Waiter/Garson: fun_waiter@hotelpos.com
+INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, role, aud, confirmation_token)
+VALUES (
+  '11112222-3333-4444-5555-666677770000',
+  '00000000-0000-0000-0000-000000000000',
+  'fun_waiter@hotelpos.com',
+  crypt('demo1234', gen_salt('bf', 10)),
+  NOW(),
+  '{"provider":"email","providers":["email"]}',
+  '{"full_name":"Funtasia Garson","role":"waiter"}',
+  NOW(),
+  NOW(),
+  'authenticated',
+  'authenticated',
+  ''
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- 3. Link Profiles to Funtasia Tenant
+UPDATE public.profiles
+SET tenant_id = '99999999-9999-9999-9999-999999999999'
+WHERE email IN ('fun_admin@hotelpos.com', 'fun_kasa@hotelpos.com', 'fun_waiter@hotelpos.com');
+
+-- Set Funtasia Tenant owner to be fun_admin
+UPDATE public.tenants
+SET owner_id = '11112222-3333-4444-5555-666677778888'
+WHERE id = '99999999-9999-9999-9999-999999999999';
+
+-- 4. Create Locations for Funtasia
+INSERT INTO public.locations (id, tenant_id, name, slug, icon, is_active)
+VALUES 
+  ('88888888-8888-8888-8888-888888888888', '99999999-9999-9999-9999-999999999999', 'Danışma & Kasa', 'reception', 'ConciergeBell', true),
+  ('88888888-8888-8888-8888-888888888889', '99999999-9999-9999-9999-999999999999', 'VR Oyun Alanı', 'vr-zone', 'Gamepad2', true),
+  ('88888888-8888-8888-8888-888888888890', '99999999-9999-9999-9999-999999999999', 'Trambolin Parkı', 'trampoline', 'Activity', true),
+  ('88888888-8888-8888-8888-888888888891', '99999999-9999-9999-9999-999999999999', 'Kafe & Bar', 'bar', 'Coffee', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- 5. Create Funtasia Wristband Wallets (Rooms)
+INSERT INTO public.rooms (id, tenant_id, room_number, wallet_balance, pin_code, status)
+VALUES 
+  ('e0e0e0e0-e0e0-e0e0-e0e0-e0e0e0e02011', '99999999-9999-9999-9999-999999999999', '201', 500.00, '1234', 'occupied'),
+  ('e0e0e0e0-e0e0-e0e0-e0e0-e0e0e0e02022', '99999999-9999-9999-9999-999999999999', '202', 150.00, '4321', 'occupied'),
+  ('e0e0e0e0-e0e0-e0e0-e0e0-e0e0e0e02033', '99999999-9999-9999-9999-999999999999', '203', 0.00, '0000', 'active')
+ON CONFLICT (id) DO NOTHING;
+
+-- 6. Create Funtasia Customers (Guests)
+INSERT INTO public.guests (id, room_id, guest_name, card_uid, status)
+VALUES 
+  ('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f02011', 'e0e0e0e0-e0e0-e0e0-e0e0-e0e0e0e02011', 'Alp Eren', 'E1E2E3E4', 'active'),
+  ('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f02022', 'e0e0e0e0-e0e0-e0e0-e0e0-e0e0e0e02022', 'Selin Yılmaz', 'D1D2D3D4', 'active')
+ON CONFLICT (id) DO NOTHING;
+

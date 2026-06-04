@@ -28,6 +28,7 @@ import { createClient } from '../../utils/supabase';
 import RfidLookupModal from '../../components/RfidLookupModal';
 import BillingLockScreen from '../../components/BillingLockScreen';
 import SupportChatbot from '../../components/SupportChatbot';
+import { useTerminology } from '../../hooks/useTerminology';
 
 const NAV_ITEMS = [
   { href: '/dashboard', label: 'Genel Bakış', icon: <LayoutDashboard size={18} /> },
@@ -45,7 +46,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const { profile, tenant, signOut, isLoading } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const t = useTerminology();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navItems = [
+    { href: '/dashboard', label: 'Genel Bakış', icon: <LayoutDashboard size={18} /> },
+    { href: '/dashboard/reception', label: t.receptionLabel, icon: <ConciergeBell size={18} /> },
+    { href: '/dashboard/rooms', label: t.roomsLabel, icon: <DoorOpen size={18} /> },
+    { href: '/dashboard/guests', label: t.guestsLabel, icon: <Users size={18} /> },
+    { href: '/dashboard/users', label: 'Personel', icon: <UserCheck size={18} /> },
+    { href: '/dashboard/reports', label: 'Raporlar', icon: <BarChart3 size={18} /> },
+    { href: '/dashboard/transactions', label: 'İşlemler', icon: <ArrowLeftRight size={18} /> },
+    { href: '/dashboard/settings', label: 'Ayarlar', icon: <Settings size={18} /> },
+  ];
 
   // RFID States
   const [scannedCardUid, setScannedCardUid] = useState<string | null>(null);
@@ -165,6 +178,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div>
+      {/* Mobile Menu Backdrop Overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="mobile-menu-overlay" 
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside className="sidebar" style={mobileMenuOpen ? { display: 'flex' } : undefined}>
         {/* Logo */}
@@ -183,14 +204,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div>
             <div style={{ fontSize: 14, fontWeight: 700 }}>RFID POS</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>
-              {tenant?.name || 'Otel Yönetimi'}
+              {tenant?.name || `${t.tenantLabel} Yönetimi`}
             </div>
           </div>
         </div>
 
         {/* Navigation */}
         <nav style={{ flex: 1, padding: '12px 0' }}>
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.href}
               className={`sidebar-link ${pathname === item.href ? 'active' : ''}`}
@@ -238,7 +259,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {profile?.full_name || 'Kullanıcı'}
               </div>
               <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-                {profile?.role === 'hotel_admin' ? 'Otel Yöneticisi' : profile?.role || ''}
+                {profile?.role === 'hotel_admin' ? `${t.tenantLabel} Yöneticisi` : profile?.role || ''}
               </div>
             </div>
           </div>
@@ -406,7 +427,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     >
                       <div>
                         <div style={{ fontWeight: 600 }}>{g.guest_name}</div>
-                        <div style={{ fontSize: 10, color: 'var(--muted)' }}>Oda {g.room_number}</div>
+                        <div style={{ fontSize: 10, color: 'var(--muted)' }}>{t.roomLabel} {g.room_number}</div>
                       </div>
                       <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--accent)', background: 'var(--accent-glow)', padding: '2px 6px', borderRadius: 4 }}>
                         {g.card_uid}

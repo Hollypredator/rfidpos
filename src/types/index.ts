@@ -7,7 +7,7 @@ export type UserRole = 'super_admin' | 'hotel_admin' | 'manager' | 'receptionist
 export type TenantStatus = 'active' | 'inactive' | 'suspended';
 export type RoomStatus = 'active' | 'occupied' | 'maintenance' | 'checked_out';
 export type GuestStatus = 'active' | 'inactive';
-export type TransactionType = 'charge' | 'refund' | 'topup';
+export type TransactionType = 'charge' | 'refund' | 'topup' | 'deposit' | 'deposit_refund';
 export type DeviceType = 'handheld' | 'desktop' | 'tablet' | 'kiosk';
 
 // ── Tenant (Otel) ──────────────────────────────
@@ -61,6 +61,7 @@ export interface Room {
   wallet_balance: number;
   pin_code: string;
   status: RoomStatus;
+  daily_limit?: number;
   created_at?: string;
 }
 

@@ -7,10 +7,14 @@ import {
 import { useAuth } from '../../../contexts/AuthContext';
 import { createClient } from '../../../utils/supabase';
 import { Guest, Room } from '../../../types';
+import { useTerminology } from '../../../hooks/useTerminology';
+import { useToast } from '../../../contexts/ToastContext';
 
 export default function GuestsPage() {
   const { tenant } = useAuth();
   const supabase = createClient();
+  const t = useTerminology();
+  const { toast } = useToast();
   const [guests, setGuests] = useState<(Guest & { room?: Room })[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -135,25 +139,36 @@ export default function GuestsPage() {
           .update({ guest_name: formName, card_uid: formCardUid, room_id: formRoomId, status: formStatus })
           .eq('id', editingGuest.id);
         if (error) throw error;
+        toast({ message: `${t.guestLabel} başarıyla güncellendi!`, type: 'success' });
       } else {
         const { error } = await supabase
           .from('guests')
           .insert({ guest_name: formName, card_uid: formCardUid, room_id: formRoomId, status: formStatus });
         if (error) throw error;
+        toast({ message: `${t.guestLabel} başarıyla eklendi!`, type: 'success' });
       }
       setShowModal(false);
       fetchData();
+      window.dispatchEvent(new CustomEvent('rfid-db-updated'));
     } catch (err: any) {
       setFormError(err.message || 'Kayıt hatası');
+      toast({ message: `Hata: ${err.message || 'İşlem başarısız!'}`, type: 'error' });
     } finally {
       setFormSaving(false);
     }
   };
 
   const handleDelete = async (guestId: string) => {
-    if (!confirm('Bu misafiri silmek istediğinize emin misiniz?')) return;
-    await supabase.from('guests').delete().eq('id', guestId);
-    fetchData();
+    if (!confirm(`Bu ${t.guestLabel.toLowerCase()} kaydını silmek istediğinize emin misiniz?`)) return;
+    try {
+      const { error } = await supabase.from('guests').delete().eq('id', guestId);
+      if (error) throw error;
+      toast({ message: `${t.guestLabel} silindi.`, type: 'warning' });
+      fetchData();
+      window.dispatchEvent(new CustomEvent('rfid-db-updated'));
+    } catch (err: any) {
+      toast({ message: `Hata: ${err.message}`, type: 'error' });
+    }
   };
 
   const filtered = guests.filter(g =>
@@ -165,11 +180,11 @@ export default function GuestsPage() {
     <div>
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 className="page-title">Misafirler</h1>
-          <p className="page-subtitle">{guests.length} misafir kayıtlı</p>
+          <h1 className="page-title">{t.guestsLabel}</h1>
+          <p className="page-subtitle">{guests.length} {t.guestLabel.toLowerCase()} kayıtlı</p>
         </div>
         <button className="btn btn-primary" onClick={openAddModal} disabled={rooms.length === 0}>
-          <Plus size={16} /> Yeni Misafir
+          <Plus size={16} /> {t.newGuestLabel}
         </button>
       </div>
 
@@ -191,62 +206,64 @@ export default function GuestsPage() {
         ) : filtered.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>
             <Users size={32} style={{ margin: '0 auto 8px', opacity: 0.3 }} />
-            <p>{search ? 'Sonuç bulunamadı' : 'Henüz misafir eklenmemiş'}</p>
+            <p>{search ? 'Sonuç bulunamadı' : `Henüz ${t.guestLabel.toLowerCase()} eklenmemiş`}</p>
           </div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Misafir</th>
-                <th>Kart UID</th>
-                <th>Oda</th>
-                <th>Durum</th>
-                <th style={{ textAlign: 'right' }}>İşlem</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((guest) => (
-                <tr key={guest.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{
-                        width: 32, height: 32, borderRadius: '50%',
-                        background: 'linear-gradient(135deg, var(--accent), #4f46e5)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 13, fontWeight: 600, color: 'white', flexShrink: 0,
-                      }}>
-                        {guest.guest_name.charAt(0).toUpperCase()}
-                      </div>
-                      <span style={{ fontWeight: 500 }}>{guest.guest_name}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span style={{ fontFamily: 'monospace', fontSize: 13, color: 'var(--accent-light)', background: 'var(--accent-glow)', padding: '2px 8px', borderRadius: 6 }}>
-                      {guest.card_uid}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <DoorOpen size={14} style={{ color: 'var(--muted)' }} />
-                      <span>{(guest as any).room?.room_number || '—'}</span>
-                    </div>
-                  </td>
-                  <td>
-                    {guest.status === 'active'
-                      ? <span className="badge badge-success">Aktif</span>
-                      : <span className="badge badge-muted">Pasif</span>
-                    }
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                      <button className="btn btn-ghost btn-sm" onClick={() => openEditModal(guest)}><Edit2 size={14} /></button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(guest.id)} style={{ color: 'var(--danger)' }}><Trash2 size={14} /></button>
-                    </div>
-                  </td>
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>{t.guestLabel}</th>
+                  <th>Kart UID</th>
+                  <th>{t.roomLabel}</th>
+                  <th>Durum</th>
+                  <th style={{ textAlign: 'right' }}>İşlem</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((guest) => (
+                  <tr key={guest.id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                          width: 32, height: 32, borderRadius: '50%',
+                          background: 'linear-gradient(135deg, var(--accent), #4f46e5)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 13, fontWeight: 600, color: 'white', flexShrink: 0,
+                        }}>
+                          {guest.guest_name.charAt(0).toUpperCase()}
+                        </div>
+                        <span style={{ fontWeight: 500 }}>{guest.guest_name}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span style={{ fontFamily: 'monospace', fontSize: 13, color: 'var(--accent-light)', background: 'var(--accent-glow)', padding: '2px 8px', borderRadius: 6 }}>
+                        {guest.card_uid}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <DoorOpen size={14} style={{ color: 'var(--muted)' }} />
+                        <span>{(guest as any).room?.room_number || '—'}</span>
+                      </div>
+                    </td>
+                    <td>
+                      {guest.status === 'active'
+                        ? <span className="badge badge-success">Aktif</span>
+                        : <span className="badge badge-muted">Pasif</span>
+                      }
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <button className="btn btn-ghost btn-sm" onClick={() => openEditModal(guest)}><Edit2 size={14} /></button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(guest.id)} style={{ color: 'var(--danger)' }}><Trash2 size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
@@ -255,7 +272,7 @@ export default function GuestsPage() {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ fontSize: 17, fontWeight: 700 }}>{editingGuest ? 'Misafir Düzenle' : 'Yeni Misafir'}</h3>
+              <h3 style={{ fontSize: 17, fontWeight: 700 }}>{editingGuest ? `${t.guestLabel} Düzenle` : t.newGuestLabel}</h3>
               <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer' }}><X size={20} /></button>
             </div>
 
@@ -267,7 +284,7 @@ export default function GuestsPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label className="input-label">Misafir Adı</label>
+                <label className="input-label">{t.guestNameLabel}</label>
                 <input className="input" placeholder="Ahmet Yılmaz" value={formName} onChange={(e) => setFormName(e.target.value)} />
               </div>
               <div>
@@ -314,7 +331,7 @@ export default function GuestsPage() {
                 </span>
               </div>
               <div>
-                <label className="input-label">Oda</label>
+                <label className="input-label">{t.roomLabel}</label>
                 <select 
                   className="input" 
                   value={formRoomId} 
@@ -328,12 +345,12 @@ export default function GuestsPage() {
                   }}
                 >
                   {rooms.map(r => (
-                    <option key={r.id} value={r.id}>Oda {r.room_number}</option>
+                    <option key={r.id} value={r.id}>{t.roomLabel} {r.room_number}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="input-label">Kart PIN Kodu (4 Hane)</label>
+                <label className="input-label">{t.pinLabel} (4 Hane)</label>
                 <input 
                   className="input" 
                   maxLength={4}

@@ -164,12 +164,13 @@ export class OfflineDBService {
     
     // We run this in a readwrite transaction across rooms, guests, transactions, and sync_queue
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(['rooms', 'guests', 'transactions', 'sync_queue'], 'readwrite');
+      const tx = db.transaction(['rooms', 'guests', 'transactions', 'sync_queue', 'tenants'], 'readwrite');
       
       const roomsStore = tx.objectStore('rooms');
       const guestsStore = tx.objectStore('guests');
       const txsStore = tx.objectStore('transactions');
       const queueStore = tx.objectStore('sync_queue');
+      const tenantsStore = tx.objectStore('tenants');
 
       const cardIndex = guestsStore.index('card_uid');
       const guestRequest = cardIndex.get(params.cardUid);
@@ -199,73 +200,114 @@ export class OfflineDBService {
             return reject(new Error(`Room is not occupied or active (current status: ${room.status}).`));
           }
 
-          // PIN code validation for charges
-          if (params.type === 'charge') {
-            // Her zaman PIN kontrolü yap — boş PIN ile bypass'ı engelle
-            if (room.pin_code && room.pin_code.length > 0) {
-              if (!params.pinCode || params.pinCode !== room.pin_code) {
-                return reject(new Error('Hatalı PIN kodu. Lütfen tekrar deneyiniz.'));
+          // 1. Fetch tenant to get daily spending limit configuration
+          const tenantRequest = tenantsStore.get(params.tenantId);
+          tenantRequest.onerror = () => reject(new Error('Failed to fetch tenant settings.'));
+
+          tenantRequest.onsuccess = () => {
+            const tenantObj = tenantRequest.result as Tenant | undefined;
+
+            // 2. Fetch all transactions to compute today's spending for the room
+            const txsRequest = txsStore.getAll();
+            txsRequest.onerror = () => reject(new Error('Failed to retrieve transactions for limit check.'));
+
+            txsRequest.onsuccess = () => {
+              const allTxs = txsRequest.result as Transaction[];
+              
+              // Filter to get room's charges made today
+              const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+              const roomTxsToday = allTxs.filter(t => 
+                t.room_id === room.id && 
+                t.type === 'charge' && 
+                t.created_at.startsWith(todayStr)
+              );
+
+              const spentToday = roomTxsToday.reduce((sum, t) => sum + Number(t.amount), 0);
+
+              // 3. Daily spending limit validation
+              if (params.type === 'charge') {
+                const tenantLimit = (tenantObj?.settings as any)?.daily_spending_limit;
+                const limitToUse = (room.daily_limit && Number(room.daily_limit) > 0)
+                  ? Number(room.daily_limit)
+                  : (tenantLimit ? Number(tenantLimit) : 0);
+
+                if (limitToUse > 0) {
+                  const newTotal = spentToday + Number(params.amount);
+                  if (newTotal > limitToUse) {
+                    return reject(new Error(`Günlük harcama limiti aşıldı! (Limit: ₺${limitToUse.toFixed(2)}, Bugün harcanan: ₺${spentToday.toFixed(2)}, Denenen: ₺${Number(params.amount).toFixed(2)})`));
+                  }
+                }
               }
-            }
-          }
 
-          // Balance validation in cents to avoid floating point precision errors
-          const balanceCents = Math.round(Number(room.wallet_balance) * 100);
-          const amountCents = Math.round(Number(params.amount) * 100);
+              // PIN code validation for charges
+              if (params.type === 'charge') {
+                // Her zaman PIN kontrolü yap — boş PIN ile bypass'ı engelle
+                if (room.pin_code && room.pin_code.length > 0) {
+                  if (!params.pinCode || params.pinCode !== room.pin_code) {
+                    return reject(new Error('Hatalı PIN kodu. Lütfen tekrar deneyiniz.'));
+                  }
+                }
+              }
 
-          if (params.type === 'charge') {
-            if (balanceCents < amountCents) {
-              return reject(new Error(`Yetersiz bakiye. Mevcut: ₺${Number(room.wallet_balance).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}, Gereken: ₺${Number(params.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`));
-            }
-          }
+              // Balance validation in cents to avoid floating point precision errors
+              const balanceCents = Math.round(Number(room.wallet_balance) * 100);
+              const amountCents = Math.round(Number(params.amount) * 100);
 
-          let newBalance = Number(room.wallet_balance);
-          if (params.type === 'charge') {
-            newBalance -= Number(params.amount);
-          } else if (params.type === 'topup' || params.type === 'refund') {
-            newBalance += Number(params.amount);
-          }
-          newBalance = Number(newBalance.toFixed(2));
+              if (params.type === 'charge') {
+                if (balanceCents < amountCents) {
+                  return reject(new Error(`Yetersiz bakiye. Mevcut: ₺${Number(room.wallet_balance).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}, Gereken: ₺${Number(params.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}`));
+                }
+              }
 
-          // Create transaction record
-          const transactionId = crypto.randomUUID();
-          const newTransaction: Transaction = {
-            id: transactionId,
-            tenant_id: params.tenantId,
-            room_id: room.id,
-            guest_id: guest.id,
-            amount: Number(params.amount),
-            type: params.type,
-            location: params.location,
-            performed_by: params.performedBy,
-            is_synced: false,
-            created_at: new Date().toISOString()
-          };
+              let newBalance = Number(room.wallet_balance);
+              if (params.type === 'charge') {
+                newBalance -= Number(params.amount);
+              } else if (params.type === 'topup' || params.type === 'refund') {
+                newBalance += Number(params.amount);
+              }
+              newBalance = Number(newBalance.toFixed(2));
 
-          // Update Room balance locally
-          const updatedRoom: Room = {
-            ...room,
-            wallet_balance: Number(newBalance.toFixed(2))
-          };
+              // Create transaction record
+              const transactionId = crypto.randomUUID();
+              const newTransaction: Transaction = {
+                id: transactionId,
+                tenant_id: params.tenantId,
+                room_id: room.id,
+                guest_id: guest.id,
+                amount: Number(params.amount),
+                type: params.type,
+                location: params.location,
+                performed_by: params.performedBy,
+                is_synced: false,
+                created_at: new Date().toISOString()
+              };
 
-          // Push queue record
-          const queueItem: SyncQueueItem = {
-            id: transactionId,
-            transaction: newTransaction,
-            attempts: 0
-          };
+              // Update Room balance locally
+              const updatedRoom: Room = {
+                ...room,
+                wallet_balance: Number(newBalance.toFixed(2))
+              };
 
-          // Execute IndexedDB writes
-          roomsStore.put(updatedRoom);
-          txsStore.put(newTransaction);
-          queueStore.put(queueItem);
+              // Push queue record
+              const queueItem: SyncQueueItem = {
+                id: transactionId,
+                transaction: newTransaction,
+                attempts: 0
+              };
 
-          tx.oncomplete = () => {
-            resolve({ transaction: newTransaction, updatedRoom });
-          };
+              // Execute IndexedDB writes
+              roomsStore.put(updatedRoom);
+              txsStore.put(newTransaction);
+              queueStore.put(queueItem);
 
-          tx.onerror = () => {
-            reject(new Error('Offline transaction writing failed. Transaction rolled back.'));
+              tx.oncomplete = () => {
+                resolve({ transaction: newTransaction, updatedRoom });
+              };
+
+              tx.onerror = () => {
+                reject(new Error('Offline transaction writing failed. Transaction rolled back.'));
+              };
+            };
           };
         };
       };

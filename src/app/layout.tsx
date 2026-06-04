@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "../contexts/AuthContext";
 import { ThemeProvider } from "../contexts/ThemeContext";
+import { ToastProvider } from "../contexts/ToastContext";
 import { ErrorBoundary } from "../components/ErrorBoundary";
+import NfcStatusBanner from "../components/NfcStatusBanner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -38,7 +40,10 @@ export default function RootLayout({
         <ErrorBoundary>
           <ThemeProvider>
             <AuthProvider>
-              {children}
+              <ToastProvider>
+                <NfcStatusBanner />
+                {children}
+              </ToastProvider>
             </AuthProvider>
           </ThemeProvider>
         </ErrorBoundary>

@@ -7,10 +7,14 @@ import {
 import { useAuth } from '../../../contexts/AuthContext';
 import { createClient } from '../../../utils/supabase';
 import { Profile } from '../../../types';
+import { useTerminology } from '../../../hooks/useTerminology';
+import { useToast } from '../../../contexts/ToastContext';
 
 export default function UsersPage() {
   const { tenant } = useAuth();
   const supabase = createClient();
+  const t = useTerminology();
+  const { toast } = useToast();
 
   const [users, setUsers] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -95,6 +99,7 @@ export default function UsersPage() {
           })
           .eq('id', editingUser.id);
         if (error) throw error;
+        toast({ message: 'Personel başarıyla güncellendi!', type: 'success' });
       } else {
         // Insert new profile (in mock mode, this adds local user, in real supabase it creates db profile)
         const { error } = await supabase
@@ -107,11 +112,14 @@ export default function UsersPage() {
             is_active: formActive
           });
         if (error) throw error;
+        toast({ message: 'Personel başarıyla kaydedildi!', type: 'success' });
       }
       setShowModal(false);
       fetchUsers();
+      window.dispatchEvent(new CustomEvent('rfid-db-updated'));
     } catch (err: any) {
       setFormError(err.message || 'Kayıt sırasında hata oluştu.');
+      toast({ message: `Hata: ${err.message || 'Kayıt başarısız!'}`, type: 'error' });
     } finally {
       setFormSaving(false);
     }
@@ -122,9 +130,11 @@ export default function UsersPage() {
     try {
       const { error } = await supabase.from('profiles').delete().eq('id', id);
       if (error) throw error;
+      toast({ message: 'Personel silindi.', type: 'warning' });
       fetchUsers();
+      window.dispatchEvent(new CustomEvent('rfid-db-updated'));
     } catch (err: any) {
-      alert(err.message || 'Silme hatası');
+      toast({ message: `Hata: ${err.message || 'Silme işlemi başarısız!'}`, type: 'error' });
     }
   };
 
@@ -135,7 +145,7 @@ export default function UsersPage() {
       case 'manager':
         return <span className="badge badge-warning">Müdür</span>;
       case 'receptionist':
-        return <span className="badge badge-accent">Resepsiyonist</span>;
+        return <span className="badge badge-accent">{t.receptionLabel} Görevlisi</span>;
       case 'cashier':
         return <span className="badge badge-success">Kasiyer</span>;
       case 'waiter':
@@ -189,66 +199,68 @@ export default function UsersPage() {
             <p>{search ? 'Sonuç bulunamadı' : 'Henüz personel tanımlanmamış'}</p>
           </div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Ad Soyad</th>
-                <th>E-posta Adresi</th>
-                <th>Rol / Yetki</th>
-                <th>Durum</th>
-                <th style={{ textAlign: 'right' }}>İşlem</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((user) => (
-                <tr key={user.id}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{
-                        width: 32, height: 32, borderRadius: '50%',
-                        background: 'linear-gradient(135deg, var(--accent), #4f46e5)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 13, fontWeight: 600, color: 'white', flexShrink: 0,
-                      }}>
-                        {user.full_name.charAt(0).toUpperCase()}
-                      </div>
-                      <span style={{ fontWeight: 500 }}>{user.full_name}</span>
-                    </div>
-                  </td>
-                  <td style={{ fontSize: 13, color: 'var(--muted)' }}>{user.email}</td>
-                  <td>{getRoleBadge(user.role)}</td>
-                  <td>
-                    {user.is_active ?? true ? (
-                      <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <CheckCircle size={10} /> Aktif
-                      </span>
-                    ) : (
-                      <span className="badge badge-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                        <XCircle size={10} /> Pasif
-                      </span>
-                    )}
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    {/* Admin users cannot delete themselves or change their role to prevent lockouts */}
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                      <button className="btn btn-ghost btn-sm" onClick={() => openEditModal(user)}>
-                        <Edit2 size={14} />
-                      </button>
-                      <button 
-                        className="btn btn-ghost btn-sm" 
-                        onClick={() => handleDelete(user.id)} 
-                        style={{ color: 'var(--danger)' }}
-                        disabled={user.role === 'hotel_admin'}
-                        title={user.role === 'hotel_admin' ? 'Otel sahibi silinemez' : ''}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Ad Soyad</th>
+                  <th>E-posta Adresi</th>
+                  <th>Rol / Yetki</th>
+                  <th>Durum</th>
+                  <th style={{ textAlign: 'right' }}>İşlem</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((user) => (
+                  <tr key={user.id}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                          width: 32, height: 32, borderRadius: '50%',
+                          background: 'linear-gradient(135deg, var(--accent), #4f46e5)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 13, fontWeight: 600, color: 'white', flexShrink: 0,
+                        }}>
+                          {user.full_name.charAt(0).toUpperCase()}
+                        </div>
+                        <span style={{ fontWeight: 500 }}>{user.full_name}</span>
+                      </div>
+                    </td>
+                    <td style={{ fontSize: 13, color: 'var(--muted)' }}>{user.email}</td>
+                    <td>{getRoleBadge(user.role)}</td>
+                    <td>
+                      {user.is_active ?? true ? (
+                        <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <CheckCircle size={10} /> Aktif
+                        </span>
+                      ) : (
+                        <span className="badge badge-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <XCircle size={10} /> Pasif
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      {/* Admin users cannot delete themselves or change their role to prevent lockouts */}
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <button className="btn btn-ghost btn-sm" onClick={() => openEditModal(user)}>
+                          <Edit2 size={14} />
+                        </button>
+                        <button 
+                          className="btn btn-ghost btn-sm" 
+                          onClick={() => handleDelete(user.id)} 
+                          style={{ color: 'var(--danger)' }}
+                          disabled={user.role === 'hotel_admin'}
+                          title={user.role === 'hotel_admin' ? `${t.tenantLabel} sahibi silinemez` : ''}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
@@ -296,13 +308,13 @@ export default function UsersPage() {
                   disabled={editingUser?.role === 'hotel_admin'}
                 >
                   <option value="manager">Müdür (Tüm Raporlar + Ayarlar)</option>
-                  <option value="receptionist">Resepsiyonist (Kart & Bakiye Yönetimi)</option>
+                  <option value="receptionist">{t.receptionLabel} Görevlisi (Kart & Bakiye Yönetimi)</option>
                   <option value="cashier">Kasiyer (POS Satış & İadeler)</option>
                   <option value="waiter">Garson (Sadece POS Satış Yetkisi)</option>
                 </select>
                 {editingUser?.role === 'hotel_admin' && (
                   <span style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, display: 'block' }}>
-                    Otel kurucusunun yönetici yetkileri değiştirilemez.
+                    {t.tenantLabel} kurucusunun yönetici yetkileri değiştirilemez.
                   </span>
                 )}
               </div>

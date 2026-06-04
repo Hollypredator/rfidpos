@@ -8,10 +8,14 @@ import {
 import { useAuth } from '../../../contexts/AuthContext';
 import { createClient } from '../../../utils/supabase';
 import { Location, Device } from '../../../types';
+import { useTerminology } from '../../../hooks/useTerminology';
+import { useToast } from '../../../contexts/ToastContext';
 
 export default function SettingsPage() {
   const { tenant, refreshProfile } = useAuth();
   const supabase = createClient();
+  const t = useTerminology();
+  const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<'info' | 'locations' | 'devices' | 'billing'>('info');
 
@@ -22,6 +26,9 @@ export default function SettingsPage() {
   const [address, setAddress] = useState('');
   const [currency, setCurrency] = useState('TRY');
   const [timezone, setTimezone] = useState('Europe/Istanbul');
+  const [businessType, setBusinessType] = useState<'hotel' | 'entertainment'>('hotel');
+  const [depositAmount, setDepositAmount] = useState<number>(0);
+  const [dailySpendingLimit, setDailySpendingLimit] = useState<number>(0);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -46,6 +53,9 @@ export default function SettingsPage() {
       setAddress(tenant.address || '');
       setCurrency(tenant.currency);
       setTimezone(tenant.timezone);
+      setBusinessType((tenant.settings as any)?.business_type || 'hotel');
+      setDepositAmount((tenant.settings as any)?.deposit_amount || 0);
+      setDailySpendingLimit((tenant.settings as any)?.daily_spending_limit || 0);
       fetchLocations();
       fetchDevices();
     }
@@ -76,13 +86,29 @@ export default function SettingsPage() {
     setSaving(true);
     const { error } = await supabase
       .from('tenants')
-      .update({ name, email, phone, address, currency, timezone })
+      .update({
+        name,
+        email,
+        phone,
+        address,
+        currency,
+        timezone,
+        settings: {
+          ...(tenant.settings || {}),
+          business_type: businessType,
+          deposit_amount: depositAmount,
+          daily_spending_limit: dailySpendingLimit,
+        }
+      })
       .eq('id', tenant.id);
 
     if (!error) {
       setSaved(true);
       await refreshProfile();
+      toast({ message: 'Ayarlar başarıyla kaydedildi!', type: 'success' });
       setTimeout(() => setSaved(false), 2000);
+    } else {
+      toast({ message: 'Kaydetme sırasında hata oluştu: ' + error.message, type: 'error' });
     }
     setSaving(false);
   };
@@ -100,6 +126,9 @@ export default function SettingsPage() {
       setNewLocName('');
       setNewLocSlug('');
       fetchLocations();
+      toast({ message: 'Lokasyon başarıyla eklendi!', type: 'success' });
+    } else {
+      toast({ message: 'Lokasyon eklenirken hata oluştu.', type: 'error' });
     }
   };
 
@@ -107,6 +136,7 @@ export default function SettingsPage() {
     if (!confirm('Bu lokasyonu silmek istediğinize emin misiniz? (Bağlı işlemler etkilenebilir)')) return;
     await supabase.from('locations').delete().eq('id', id);
     fetchLocations();
+    toast({ message: 'Lokasyon silindi.', type: 'warning' });
   };
 
   const addDevice = async () => {
@@ -131,8 +161,9 @@ export default function SettingsPage() {
       setNewDevHardwareId('');
       setNewDevLoc('');
       fetchDevices();
+      toast({ message: 'Cihaz başarıyla kaydedildi!', type: 'success' });
     } else {
-      alert('Cihaz kaydedilirken hata oluştu: ' + error.message);
+      toast({ message: 'Cihaz kaydedilirken hata oluştu: ' + error.message, type: 'error' });
     }
     setDevSaving(false);
   };
@@ -141,6 +172,7 @@ export default function SettingsPage() {
     if (!confirm('Bu cihazın kaydını silmek istediğinize emin misiniz? (Cihazın POS oturumu sonlandırılacaktır)')) return;
     await supabase.from('devices').delete().eq('id', id);
     fetchDevices();
+    toast({ message: 'Cihaz kaydı silindi.', type: 'warning' });
   };
 
   const toggleDeviceActive = async (device: Device) => {
@@ -168,7 +200,7 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="page-header">
         <h1 className="page-title">Sistem Ayarları</h1>
-        <p className="page-subtitle">Otel yapılandırması, lokasyonlar ve POS terminalleri</p>
+        <p className="page-subtitle">{t.tenantLabel} yapılandırması, lokasyonlar ve POS terminalleri</p>
       </div>
 
       {/* Tabs Menu */}
@@ -185,7 +217,7 @@ export default function SettingsPage() {
           onClick={() => setActiveTab('info')}
           style={{ padding: '8px 16px', borderRadius: 10, fontSize: 13 }}
         >
-          <Building2 size={16} /> Otel Bilgileri
+          <Building2 size={16} /> {t.tenantLabel} Bilgileri
         </button>
         <button
           className={`btn ${activeTab === 'locations' ? 'btn-primary' : 'btn-ghost'}`}
@@ -199,7 +231,7 @@ export default function SettingsPage() {
           onClick={() => setActiveTab('devices')}
           style={{ padding: '8px 16px', borderRadius: 10, fontSize: 13 }}
         >
-          <Smartphone size={16} /> POS Terminalleri (Cihazlar)
+          <Smartphone size={16} /> POS Cihazları
         </button>
         <button
           className={`btn ${activeTab === 'billing' ? 'btn-primary' : 'btn-ghost'}`}
@@ -217,12 +249,21 @@ export default function SettingsPage() {
           <div className="glass-card animate-fade-in" style={{ padding: 24 }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
               <Building2 size={18} style={{ color: 'var(--accent)' }} />
-              Kurumsal Otel Profili
+              Kurumsal {t.tenantLabel} Profili
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <label className="input-label">Otel Adı</label>
-                <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
+                <div>
+                  <label className="input-label">{t.tenantLabel} Adı</label>
+                  <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+                </div>
+                <div>
+                  <label className="input-label">İşletme Tipi</label>
+                  <select className="input" value={businessType} onChange={(e) => setBusinessType(e.target.value as any)}>
+                    <option value="hotel">Otel / Konaklama</option>
+                    <option value="entertainment">Eğlence Merkezi / Diğer</option>
+                  </select>
+                </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
@@ -254,6 +295,19 @@ export default function SettingsPage() {
                     <option value="Europe/Berlin">Berlin (GMT+1)</option>
                     <option value="Europe/London">Londra (GMT)</option>
                   </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label className="input-label">{t.depositLabel} Tutarı (₺)</label>
+                  <input className="input" type="number" min="0" step="any" placeholder="0" value={depositAmount || ''} onChange={(e) => setDepositAmount(parseFloat(e.target.value) || 0)} />
+                  <small style={{ color: 'var(--muted)', fontSize: 11, marginTop: 4, display: 'block' }}>0 = depozito alınmaz. Giriş sırasında otomatik tahsil edilir.</small>
+                </div>
+                <div>
+                  <label className="input-label">{t.dailyLimitLabel} (₺)</label>
+                  <input className="input" type="number" min="0" step="any" placeholder="0" value={dailySpendingLimit || ''} onChange={(e) => setDailySpendingLimit(parseFloat(e.target.value) || 0)} />
+                  <small style={{ color: 'var(--muted)', fontSize: 11, marginTop: 4, display: 'block' }}>0 = sınırsız. Kart başına günlük üst harcama limiti.</small>
                 </div>
               </div>
 
@@ -327,7 +381,7 @@ export default function SettingsPage() {
               Kayıtlı POS Cihazları
             </h3>
             <p style={{ color: 'var(--muted)', fontSize: 12, marginBottom: 16, marginTop: -12 }}>
-              Otelinize tanımlı lisanslı el terminalleri, tablet ve kiosk cihazları. Güvenlik için sadece kayıtlı cihazlar sisteme bağlanabilir.
+              {t.tenantLabelPossessive} tanımlı lisanslı el terminalleri, tablet ve kiosk cihazları. Güvenlik için sadece kayıtlı cihazlar sisteme bağlanabilir.
             </p>
 
             {/* Register New Device Form */}
@@ -539,7 +593,7 @@ export default function SettingsPage() {
               Sistem lisans yenilemeleri, donanım siparişleri, ek RFID kart/POS terminali talepleriniz ve diğer teknik destek işlemleri için lütfen firma satış veya destek birimiyle iletişime geçiniz.
               
               <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12 }}>
-                <div>• <strong>Otel Referans ID:</strong> <code style={{ color: 'var(--accent-light)' }}>{tenant?.id}</code></div>
+                <div>• <strong>{t.tenantLabel} Referans ID:</strong> <code style={{ color: 'var(--accent-light)' }}>{tenant?.id}</code></div>
                 <div>• <strong>İletişim E-posta:</strong> <a href="mailto:destek@hotelpos.com" style={{ color: 'var(--accent-light)', textDecoration: 'underline' }}>destek@hotelpos.com</a></div>
               </div>
             </div>
