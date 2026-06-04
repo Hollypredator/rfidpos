@@ -51,7 +51,7 @@ export default function PaymentsLedgerPage() {
   }, []);
 
   const handleApprove = async (payment: MockPayment) => {
-    if (!confirm(`${payment.tenant_name} ödemesini onaylamak istiyor musunuz? Bu işlem otelin lisansını otomatik olarak 1 yıl (365 gün) uzatacaktır.`)) return;
+    if (!confirm(`${payment.tenant_name} ödemesini onaylamak istiyor musunuz? Bu işlem işletmenin lisansını otomatik olarak 1 yıl (365 gün) uzatacaktır.`)) return;
     
     try {
       // 1. Update Payment Status to approved
@@ -164,7 +164,7 @@ export default function PaymentsLedgerPage() {
       <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
         <div style={{ position: 'relative', maxWidth: 320, width: '100%' }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
-          <input className="input" placeholder="Otel, gönderen veya referans ara..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 38 }} />
+          <input className="input" placeholder="İşletme, gönderen veya referans ara..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 38 }} />
         </div>
         <button className="btn btn-ghost btn-sm" onClick={loadData} disabled={isLoading}>
           <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> Yenile
@@ -187,10 +187,10 @@ export default function PaymentsLedgerPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Otel</th>
+                <th>İşletme</th>
                 <th>Gönderen & Banka</th>
                 <th>Tutar</th>
-                <th>Referans ID (Otel ID)</th>
+                <th>Referans ID (İşletme ID)</th>
                 <th>Tarih</th>
                 <th>Durum</th>
                 <th style={{ textAlign: 'right' }}>İşlemler</th>
@@ -272,7 +272,7 @@ export default function PaymentsLedgerPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label className="input-label">Ödeme Yapan Otel</label>
+                <label className="input-label">Ödeme Yapan İşletme</label>
                 <select className="input" value={selectedTenantId} onChange={(e) => setSelectedTenantId(e.target.value)}>
                   {tenants.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
@@ -302,7 +302,7 @@ export default function PaymentsLedgerPage() {
               </div>
 
               <div>
-                <label className="input-label">Havale Açıklaması / Referans Kodu (Varsayılan Otel ID'si)</label>
+                <label className="input-label">Havale Açıklaması / Referans Kodu (Varsayılan İşletme ID'si)</label>
                 <input className="input" placeholder={selectedTenantId} value={refCode} onChange={(e) => setRefCode(e.target.value)} />
               </div>
             </div>

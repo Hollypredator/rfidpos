@@ -36,6 +36,7 @@ export default function TenantsPage() {
   const [formStatus, setFormStatus] = useState<string>('active');
   const [formPlan, setFormPlan] = useState<string>('none');
   const [formExpiresAt, setFormExpiresAt] = useState<string>('');
+  const [formBusinessType, setFormBusinessType] = useState<'hotel' | 'entertainment'>('hotel');
   const [formSaving, setFormSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -52,6 +53,7 @@ export default function TenantsPage() {
   });
   const [addCurrency, setAddCurrency] = useState('TRY');
   const [addTimezone, setAddTimezone] = useState('Europe/Istanbul');
+  const [addBusinessType, setAddBusinessType] = useState<'hotel' | 'entertainment'>('hotel');
 
   // Stats
   const [tenantStats, setTenantStats] = useState<Record<string, { rooms: number; txns: number; totalBalance: number }>>({});
@@ -101,6 +103,7 @@ export default function TenantsPage() {
     setFormStatus(tenant.status);
     setFormPlan(tenant.subscription_plan || 'none');
     setFormExpiresAt(tenant.subscription_expires_at ? tenant.subscription_expires_at.split('T')[0] : '');
+    setFormBusinessType((tenant.settings as any)?.business_type || 'hotel');
     setFormError(null);
 
     try {
@@ -136,6 +139,11 @@ export default function TenantsPage() {
     setFormError(null);
 
     try {
+      const updatedSettings = {
+        ...(selectedTenant.settings || {}),
+        business_type: formBusinessType
+      };
+
       const { error } = await supabase
         .from('tenants')
         .update({ 
@@ -144,7 +152,8 @@ export default function TenantsPage() {
           phone: formPhone, 
           status: formStatus,
           subscription_plan: formPlan,
-          subscription_expires_at: formExpiresAt ? new Date(formExpiresAt).toISOString() : null
+          subscription_expires_at: formExpiresAt ? new Date(formExpiresAt).toISOString() : null,
+          settings: updatedSettings
         })
         .eq('id', selectedTenant.id);
       if (error) throw error;
@@ -157,7 +166,8 @@ export default function TenantsPage() {
         phone: formPhone,
         status: formStatus as any,
         subscription_plan: formPlan,
-        subscription_expires_at: formExpiresAt ? new Date(formExpiresAt).toISOString() : undefined
+        subscription_expires_at: formExpiresAt ? new Date(formExpiresAt).toISOString() : undefined,
+        settings: updatedSettings
       });
       
       setShowDetailsModal(false);
@@ -171,13 +181,14 @@ export default function TenantsPage() {
 
   const handleCreateTenant = async () => {
     if (!addName) {
-      setFormError('Otel adı zorunludur.');
+      setFormError('İşletme adı zorunludur.');
       return;
     }
     setFormSaving(true);
     setFormError(null);
 
     try {
+      const isEntertainment = addBusinessType === 'entertainment';
       const newTenantId = `tenant-${Math.random().toString(36).substr(2, 9)}`;
       const newTenant: Tenant = {
         id: newTenantId,
@@ -190,7 +201,7 @@ export default function TenantsPage() {
         timezone: addTimezone,
         subscription_plan: addPlan,
         subscription_expires_at: addExpiresAt ? new Date(addExpiresAt).toISOString() : new Date(Date.now() - 1000).toISOString(),
-        settings: {},
+        settings: { business_type: addBusinessType },
         created_at: new Date().toISOString()
       };
 
@@ -199,31 +210,56 @@ export default function TenantsPage() {
       if (tErr) throw tErr;
 
       // 2. Create Default Locations
-      await supabase.from('locations').insert([
-        { tenant_id: newTenantId, name: 'Resepsiyon', slug: 'reception', icon: 'Building', is_active: true },
-        { tenant_id: newTenantId, name: 'Restoran', slug: 'restaurant', icon: 'UtensilsCrossed', is_active: true },
-        { tenant_id: newTenantId, name: 'Bar', slug: 'bar', icon: 'Wine', is_active: true },
-        { tenant_id: newTenantId, name: 'Spa', slug: 'spa', icon: 'Sparkles', is_active: true }
-      ]);
+      if (isEntertainment) {
+        await supabase.from('locations').insert([
+          { tenant_id: newTenantId, name: 'Danışma & Kasa', slug: 'reception', icon: 'Building', is_active: true },
+          { tenant_id: newTenantId, name: 'VR Oyun Alanı', slug: 'vr-zone', icon: 'Gamepad2', is_active: true },
+          { tenant_id: newTenantId, name: 'Trambolin Parkı', slug: 'trampoline', icon: 'Activity', is_active: true },
+          { tenant_id: newTenantId, name: 'Kafe & Bar', slug: 'bar', icon: 'Coffee', is_active: true }
+        ]);
+      } else {
+        await supabase.from('locations').insert([
+          { tenant_id: newTenantId, name: 'Resepsiyon', slug: 'reception', icon: 'Building', is_active: true },
+          { tenant_id: newTenantId, name: 'Restoran', slug: 'restaurant', icon: 'UtensilsCrossed', is_active: true },
+          { tenant_id: newTenantId, name: 'Bar', slug: 'bar', icon: 'Wine', is_active: true },
+          { tenant_id: newTenantId, name: 'Spa', slug: 'spa', icon: 'Sparkles', is_active: true }
+        ]);
+      }
 
       // 3. Create Default Rooms
-      const { data: insertedRooms } = await supabase.from('rooms').insert([
+      const defaultRoomsList = isEntertainment ? [
+        { tenant_id: newTenantId, room_number: '201', wallet_balance: 500, pin_code: '1234', status: 'occupied' },
+        { tenant_id: newTenantId, room_number: '202', wallet_balance: 150, pin_code: '4321', status: 'occupied' },
+        { tenant_id: newTenantId, room_number: '203', wallet_balance: 0, pin_code: '0000', status: 'active' }
+      ] : [
         { tenant_id: newTenantId, room_number: '101', wallet_balance: 1500, pin_code: '1234', status: 'occupied' },
         { tenant_id: newTenantId, room_number: '102', wallet_balance: 350, pin_code: '4321', status: 'occupied' },
         { tenant_id: newTenantId, room_number: '103', wallet_balance: 0, pin_code: '0000', status: 'active' }
-      ]);
+      ];
+
+      const { data: insertedRooms } = await supabase.from('rooms').insert(defaultRoomsList);
 
       // 4. Create Default Guests
       if (insertedRooms && Array.isArray(insertedRooms)) {
-        const room101 = insertedRooms.find((r: any) => r.room_number === '101');
-        const room102 = insertedRooms.find((r: any) => r.room_number === '102');
+        const roomA = insertedRooms.find((r: any) => r.room_number === (isEntertainment ? '201' : '101'));
+        const roomB = insertedRooms.find((r: any) => r.room_number === (isEntertainment ? '202' : '102'));
         
         const guestsToInsert = [];
-        if (room101) {
-          guestsToInsert.push({ room_id: room101.id, guest_name: 'Ahmet Yılmaz', card_uid: `UID${Math.random().toString(36).substr(2, 6).toUpperCase()}`, status: 'active' });
+        if (roomA) {
+          guestsToInsert.push({ 
+            room_id: roomA.id, 
+            guest_name: isEntertainment ? 'Alp Eren' : 'Ahmet Yılmaz', 
+            card_uid: `UID${Math.random().toString(36).substr(2, 6).toUpperCase()}`, 
+            status: 'active' 
+          });
         }
-        if (room102) {
-          guestsToInsert.push({ room_id: room102.id, guest_name: 'Zeynep Kaya', card_uid: `UID${Math.random().toString(36).substr(2, 6).toUpperCase()}`, status: 'active' });
+        if (roomB) {
+          guestsToInsert.push({ 
+            room_id: roomB.id, 
+            guest_name: isEntertainment ? 'Selin Yılmaz' : 'Zeynep Kaya', 
+            card_uid: `UID${Math.random().toString(36).substr(2, 6).toUpperCase()}`, 
+            status: 'active' 
+          });
         }
         if (guestsToInsert.length > 0) {
           await supabase.from('guests').insert(guestsToInsert);
@@ -243,6 +279,7 @@ export default function TenantsPage() {
       });
       setAddCurrency('TRY');
       setAddTimezone('Europe/Istanbul');
+      setAddBusinessType('hotel');
       
       setShowAddModal(false);
       fetchTenants();
@@ -255,13 +292,13 @@ export default function TenantsPage() {
 
   const toggleSuspend = async (tenant: Tenant) => {
     const newStatus = tenant.status === 'suspended' ? 'active' : 'suspended';
-    if (!confirm(`Bu oteli ${newStatus === 'suspended' ? 'askıya almak' : 'aktifleştirmek'} istediğinize emin misiniz?`)) return;
+    if (!confirm(`Bu işletmeyi ${newStatus === 'suspended' ? 'askıya almak' : 'aktifleştirmek'} istediğinize emin misiniz?`)) return;
     await supabase.from('tenants').update({ status: newStatus }).eq('id', tenant.id);
     fetchTenants();
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Bu oteli ve tüm verilerini (odalar, işlemler, lokasyonlar) kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz!')) return;
+    if (!confirm('Bu işletmeyi ve tüm verilerini (odalar/birimler, işlemler, lokasyonlar) kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz!')) return;
     
     // In mock mode, we delete related records first
     await supabase.from('rooms').delete().eq('tenant_id', id);
@@ -292,11 +329,11 @@ export default function TenantsPage() {
       {/* Header */}
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 className="page-title">Otel Yönetimi</h1>
-          <p className="page-subtitle">SaaS platformundaki aktif, pasif ve askıdaki tüm otelleri izleyin ve yönetin.</p>
+          <h1 className="page-title">İşletme Yönetimi</h1>
+          <p className="page-subtitle">SaaS platformundaki aktif, pasif ve askıdaki tüm işletmeleri izleyin ve yönetin.</p>
         </div>
         <button className="btn btn-primary" onClick={() => { setFormError(null); setShowAddModal(true); }}>
-          <Plus size={16} /> Yeni Otel Kaydı
+          <Plus size={16} /> Yeni İşletme Kaydı
         </button>
       </div>
 
@@ -304,7 +341,7 @@ export default function TenantsPage() {
       <div style={{ marginBottom: 20 }}>
         <div style={{ position: 'relative', maxWidth: 320 }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
-          <input className="input" placeholder="Otel adı veya e-posta ara..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 38 }} />
+          <input className="input" placeholder="İşletme adı veya e-posta ara..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 38 }} />
         </div>
       </div>
 
@@ -318,14 +355,14 @@ export default function TenantsPage() {
         ) : filtered.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>
             <Building2 size={32} style={{ margin: '0 auto 8px', opacity: 0.3 }} />
-            <p>Otel bulunamadı</p>
+            <p>İşletme bulunamadı</p>
           </div>
         ) : (
           <table className="data-table">
             <thead>
               <tr>
-                <th>Otel</th>
-                <th>Odalar</th>
+                <th>İşletme</th>
+                <th>Odalar / Birimler</th>
                 <th>Toplam Bakiye</th>
                 <th>Toplam İşlem</th>
                 <th>Durum</th>
@@ -414,7 +451,7 @@ export default function TenantsPage() {
                         style={{ color: t.status === 'suspended' ? 'var(--success)' : 'var(--warning)' }}>
                         {t.status === 'suspended' ? <CheckCircle size={14} /> : <Ban size={14} />}
                       </button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(t.id)} style={{ color: 'var(--danger)' }} title="Oteli Sil">
+                      <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(t.id)} style={{ color: 'var(--danger)' }} title="İşletmeyi Sil">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -452,7 +489,7 @@ export default function TenantsPage() {
                 Genel Bakış
               </button>
               <button className={`btn btn-sm ${activeTab === 'rooms' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('rooms')}>
-                Odalar ({detailRooms.length})
+                {selectedTenant && (selectedTenant.settings as any)?.business_type === 'entertainment' ? `Kartlar & Bileklikler (${detailRooms.length})` : `Odalar (${detailRooms.length})`}
               </button>
               <button className={`btn btn-sm ${activeTab === 'devices' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('devices')}>
                 Cihazlar & Lokasyonlar
@@ -461,7 +498,7 @@ export default function TenantsPage() {
                 Son İşlemler
               </button>
               <button className={`btn btn-sm ${activeTab === 'edit' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('edit')}>
-                Otel Ayarlarını Düzenle
+                İşletme Ayarlarını Düzenle
               </button>
             </div>
 
@@ -479,7 +516,9 @@ export default function TenantsPage() {
                     {/* Stats Grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
                       <div className="stat-card accent" style={{ padding: 12 }}>
-                        <div style={{ fontSize: 11, color: 'var(--muted)' }}>Toplam Oda</div>
+                        <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                          {selectedTenant && (selectedTenant.settings as any)?.business_type === 'entertainment' ? 'Kart & Bileklik' : 'Toplam Oda'}
+                        </div>
                         <div style={{ fontSize: 20, fontWeight: 700, marginTop: 4 }}>{detailRooms.length}</div>
                       </div>
                       <div className="stat-card success" style={{ padding: 12 }}>
@@ -524,13 +563,13 @@ export default function TenantsPage() {
                 {activeTab === 'rooms' && (
                   <div>
                     {detailRooms.length === 0 ? (
-                      <p style={{ textAlign: 'center', color: 'var(--muted)', padding: 20 }}>Bu otele ait kayıtlı oda bulunmuyor.</p>
+                      <p style={{ textAlign: 'center', color: 'var(--muted)', padding: 20 }}>Bu işletmeye ait kayıtlı oda/birim bulunmuyor.</p>
                     ) : (
                       <table className="data-table" style={{ fontSize: 13 }}>
                         <thead>
                           <tr>
-                            <th>Oda Numarası</th>
-                            <th>Kart Sahibi / Misafir</th>
+                            <th>{selectedTenant && (selectedTenant.settings as any)?.business_type === 'entertainment' ? 'Kart / Bileklik Numarası' : 'Oda Numarası'}</th>
+                            <th>{selectedTenant && (selectedTenant.settings as any)?.business_type === 'entertainment' ? 'Müşteri / Ziyaretçi' : 'Kart Sahibi / Misafir'}</th>
                             <th>Durum</th>
                             <th style={{ textAlign: 'right' }}>Bakiye</th>
                           </tr>
@@ -540,7 +579,9 @@ export default function TenantsPage() {
                             const roomGuest = detailGuests.find((g: any) => g.room_id === room.id);
                             return (
                               <tr key={room.id}>
-                                <td style={{ fontWeight: 600 }}>Oda {room.room_number}</td>
+                                <td style={{ fontWeight: 600 }}>
+                                  {selectedTenant && (selectedTenant.settings as any)?.business_type === 'entertainment' ? `Kart ${room.room_number}` : `Oda ${room.room_number}`}
+                                </td>
                                 <td>
                                   {roomGuest ? (
                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -548,7 +589,9 @@ export default function TenantsPage() {
                                       <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'monospace' }}>Card: {roomGuest.card_uid}</span>
                                     </div>
                                   ) : (
-                                    <span style={{ color: 'var(--muted)', fontSize: 12 }}>Boş (Misafir Yok)</span>
+                                    <span style={{ color: 'var(--muted)', fontSize: 12 }}>
+                                      {selectedTenant && (selectedTenant.settings as any)?.business_type === 'entertainment' ? 'Aktif Değil (Ziyaretçi Yok)' : 'Boş (Misafir Yok)'}
+                                    </span>
                                   )}
                                 </td>
                                 <td>
@@ -583,6 +626,8 @@ export default function TenantsPage() {
                                 {loc.slug === 'restaurant' && '🍕'}
                                 {loc.slug === 'bar' && '🍷'}
                                 {loc.slug === 'spa' && '🧖'}
+                                {loc.slug === 'vr-zone' && '🎮'}
+                                {loc.slug === 'trampoline' && '🤸'}
                               </div>
                               <span style={{ fontSize: 13, fontWeight: 500 }}>{loc.name}</span>
                             </div>
@@ -663,7 +708,7 @@ export default function TenantsPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                         <div>
-                          <label className="input-label">Otel Adı</label>
+                          <label className="input-label">İşletme Adı</label>
                           <input className="input" value={formName} onChange={(e) => setFormName(e.target.value)} />
                         </div>
                         <div>
@@ -700,6 +745,21 @@ export default function TenantsPage() {
                         </div>
                       </div>
 
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div>
+                          <label className="input-label">İşletme Türü</label>
+                          <select className="input" value={formBusinessType} onChange={(e) => setFormBusinessType(e.target.value as 'hotel' | 'entertainment')}>
+                            <option value="hotel">Konaklama / Otel</option>
+                            <option value="entertainment">Eğlence Merkezi / Tesis</option>
+                          </select>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                          <span style={{ fontSize: 11, color: 'var(--muted)', paddingBottom: 10 }}>
+                            * Tür değişimi mevcut konum/odaları silmez, ancak panel gösterimlerini günceller.
+                          </span>
+                        </div>
+                      </div>
+
                       <div style={{ display: 'flex', gap: 12, marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
                         <button className="btn btn-ghost" onClick={() => setShowDetailsModal(false)} style={{ flex: 1 }}>İptal</button>
                         <button className="btn btn-primary" onClick={handleSaveEdit} disabled={formSaving} style={{ flex: 1 }}>
@@ -723,7 +783,7 @@ export default function TenantsPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h3 style={{ fontSize: 17, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Building2 size={18} style={{ color: 'var(--accent)' }} />
-                Yeni Otel Kaydı Oluştur
+                Yeni İşletme Kaydı Oluştur
               </h3>
               <button onClick={() => setShowAddModal(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer' }}><X size={20} /></button>
             </div>
@@ -736,8 +796,8 @@ export default function TenantsPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <label className="input-label">Otel Adı</label>
-                <input className="input" placeholder="Grand Antigravity Resort" value={addName} onChange={(e) => setAddName(e.target.value)} required />
+                <label className="input-label">İşletme Adı</label>
+                <input className="input" placeholder="Grand Antigravity Resort veya Funtasia Eğlence Merkezi" value={addName} onChange={(e) => setAddName(e.target.value)} required />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
@@ -786,9 +846,18 @@ export default function TenantsPage() {
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="input-label">Lisans Bitiş Tarihi</label>
-                <input className="input" type="date" value={addExpiresAt} onChange={(e) => setAddExpiresAt(e.target.value)} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label className="input-label">Lisans Bitiş Tarihi</label>
+                  <input className="input" type="date" value={addExpiresAt} onChange={(e) => setAddExpiresAt(e.target.value)} style={{ width: '100%' }} />
+                </div>
+                <div>
+                  <label className="input-label">İşletme Türü</label>
+                  <select className="input" value={addBusinessType} onChange={(e) => setAddBusinessType(e.target.value as 'hotel' | 'entertainment')} style={{ width: '100%' }}>
+                    <option value="hotel">Konaklama / Otel</option>
+                    <option value="entertainment">Eğlence Merkezi / Tesis</option>
+                  </select>
+                </div>
               </div>
             </div>
 

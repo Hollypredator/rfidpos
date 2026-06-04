@@ -179,7 +179,7 @@ export default function SupportTicketsPage() {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 className="page-title">Destek & Aktivasyon Talepleri</h1>
-          <p className="page-subtitle">Otellerden gelen lisans aktivasyon isteklerini ve destek mesajlarını yanıtlayın.</p>
+          <p className="page-subtitle">İşletmelerden gelen lisans aktivasyon isteklerini ve destek mesajlarını yanıtlayın.</p>
         </div>
         <button className="btn btn-primary" onClick={() => { setFormError(null); setShowAddModal(true); }}>
           <Plus size={16} /> Talep Girişi Yap
@@ -190,7 +190,7 @@ export default function SupportTicketsPage() {
       <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
         <div style={{ position: 'relative', maxWidth: 320, width: '100%' }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
-          <input className="input" placeholder="Otel adı, konu veya mesaj ara..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 38 }} />
+          <input className="input" placeholder="İşletme adı, konu veya mesaj ara..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 38 }} />
         </div>
         <button className="btn btn-ghost btn-sm" onClick={loadData} disabled={isLoading}>
           <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> Yenile
@@ -213,7 +213,7 @@ export default function SupportTicketsPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Otel</th>
+                <th>İşletme</th>
                 <th>Konu</th>
                 <th>Öncelik</th>
                 <th>Tarih</th>
@@ -282,7 +282,7 @@ export default function SupportTicketsPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 12 }}>
                 <div>
-                  <label className="input-label">Talebi Açan Otel</label>
+                  <label className="input-label">Talebi Açan İşletme</label>
                   <select className="input" value={selectedTenantId} onChange={(e) => setSelectedTenantId(e.target.value)}>
                     {tenants.map(t => (
                       <option key={t.id} value={t.id}>{t.name}</option>
@@ -377,7 +377,7 @@ export default function SupportTicketsPage() {
                     {selectedTicket.message}
                   </div>
                   <div style={{ fontSize: '9px', color: 'var(--muted)', marginTop: 4 }}>
-                    Otel Yöneticisi • {new Date(selectedTicket.created_at).toLocaleString('tr-TR')}
+                    İşletme Yöneticisi • {new Date(selectedTicket.created_at).toLocaleString('tr-TR')}
                   </div>
                 </div>
 
@@ -403,7 +403,7 @@ export default function SupportTicketsPage() {
                           {reply.metadata?.reply_message || 'Yanıt içeriği boş.'}
                         </div>
                         <div style={{ fontSize: '9px', color: 'var(--muted)', marginTop: 4, textAlign: isUser ? 'left' : 'right' }}>
-                          {isUser ? 'Otel Yöneticisi' : 'Siz (Destek Ekibi)'} • {new Date(reply.created_at).toLocaleString('tr-TR')}
+                          {isUser ? 'İşletme Yöneticisi' : 'Siz (Destek Ekibi)'} • {new Date(reply.created_at).toLocaleString('tr-TR')}
                         </div>
                       </div>
                     );
@@ -420,7 +420,7 @@ export default function SupportTicketsPage() {
               </div>
 
               <div>
-                <label className="input-label">Cevap Mesajı (Otel Yöneticisine Gidecek Yanıt Notu)</label>
+                <label className="input-label">Cevap Mesajı (İşletme Yöneticisine Gidecek Yanıt Notu)</label>
                 <textarea 
                   className="input" 
                   rows={4}

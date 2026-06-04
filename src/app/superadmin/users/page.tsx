@@ -92,7 +92,7 @@ export default function SuperadminUsersPage() {
     
     // If not super admin, tenant must be selected
     if (formRole !== 'super_admin' && !formTenantId) {
-      setFormError('Platform yöneticisi (Super Admin) dışındaki roller için bir Tesis/Otel seçilmelidir.');
+      setFormError('Platform yöneticisi (Super Admin) dışındaki roller için bir Tesis/İşletme seçilmelidir.');
       return;
     }
 
@@ -166,9 +166,9 @@ export default function SuperadminUsersPage() {
       case 'super_admin':
         return <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Shield size={10} /> Platform Sahibi</span>;
       case 'hotel_admin':
-        return <span className="badge badge-warning">Otel Admini</span>;
+        return <span className="badge badge-warning">İşletme Admini</span>;
       case 'manager':
-        return <span className="badge badge-primary">Müdür</span>;
+        return <span className="badge badge-primary">İşletme Müdürü</span>;
       case 'receptionist':
         return <span className="badge badge-accent">Resepsiyon / Kasa</span>;
       case 'cashier':
@@ -193,7 +193,7 @@ export default function SuperadminUsersPage() {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 className="page-title">İşletme ve Sistem Yönetimi</h1>
-          <p className="page-subtitle">SaaS platformunu yöneten Platform Sahiplerini (Platform Owner) ve otelleri yöneten İşletme Yöneticilerini (Otel Admini, Otel Müdürü) yönetin.</p>
+          <p className="page-subtitle">SaaS platformunu yöneten Platform Sahiplerini (Platform Owner) ve işletmeleri yöneten İşletme Yöneticilerini (İşletme Admini, İşletme Müdürü) yönetin.</p>
         </div>
         <button className="btn btn-primary" onClick={openAddModal}>
           <Plus size={16} /> Yeni Yönetici Ekle
@@ -233,7 +233,7 @@ export default function SuperadminUsersPage() {
                 <tr>
                   <th>Kullanıcı Bilgileri</th>
                   <th>Rol / Yetki</th>
-                  <th>Bağlı Tesis / Otel</th>
+                  <th>Bağlı Tesis / İşletme</th>
                   <th>Durum</th>
                   <th>Kayıt Tarihi</th>
                   <th style={{ textAlign: 'right' }}>İşlemler</th>
@@ -274,7 +274,7 @@ export default function SuperadminUsersPage() {
                             {userTenant.name}
                           </span>
                         ) : (
-                          <span style={{ color: 'var(--muted)', fontSize: 12 }}>— Tanımsız Otel —</span>
+                          <span style={{ color: 'var(--muted)', fontSize: 12 }}>— Tanımsız İşletme —</span>
                         )}
                       </td>
                       <td>
@@ -383,14 +383,14 @@ export default function SuperadminUsersPage() {
                   }}
                 >
                   <option value="super_admin">🛡️ Platform Sahibi (Super Admin / Platform Owner)</option>
-                  <option value="hotel_admin">🏨 Otel Admini / İşletme Sahibi</option>
-                  <option value="manager">💼 Otel Müdürü</option>
+                  <option value="hotel_admin">🏢 İşletme Admini / Sahibi</option>
+                  <option value="manager">💼 İşletme Müdürü</option>
                 </select>
               </div>
 
               {formRole !== 'super_admin' && (
                 <div>
-                  <label className="input-label">Bağlı Olduğu Tesis / Otel</label>
+                  <label className="input-label">Bağlı Olduğu Tesis / İşletme</label>
                   <select 
                     className="input" 
                     value={formTenantId} 

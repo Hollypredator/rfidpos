@@ -11,7 +11,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 
 const NAV_ITEMS = [
   { href: '/superadmin', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-  { href: '/superadmin/tenants', label: 'Oteller', icon: <Building2 size={18} /> },
+  { href: '/superadmin/tenants', label: 'İşletmeler', icon: <Building2 size={18} /> },
   { href: '/superadmin/users', label: 'Kullanıcılar', icon: <Users size={18} /> },
   { href: '/superadmin/payments', label: 'Ödemeler & Onay', icon: <CreditCard size={18} /> },
   { href: '/superadmin/orders', label: 'Donanım Siparişleri', icon: <Package size={18} /> },

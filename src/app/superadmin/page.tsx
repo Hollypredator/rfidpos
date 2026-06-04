@@ -129,7 +129,7 @@ export default function SuperadminDashboardPage() {
       case 'tenant_activated':
         icon = <Building2 size={14} />;
         color = 'var(--success)';
-        text = `Lisans Başlatıldı: ${hotelName} otel lisansı aktif edildi.`;
+        text = `Lisans Başlatıldı: ${hotelName} işletme lisansı aktif edildi.`;
         break;
       case 'tenant_suspended':
         icon = <Building2 size={14} />;
@@ -157,7 +157,7 @@ export default function SuperadminDashboardPage() {
             Sistem Yönetim Paneli
           </h1>
           <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4, margin: 0 }}>
-            Tüm oteller, lisanslar, donanım siparişleri ve operasyonel süreçler
+            Tüm işletmeler, lisanslar, donanım siparişleri ve operasyonel süreçler
           </p>
         </div>
         <button className="btn btn-ghost btn-sm" onClick={fetchDashboardData} disabled={isLoading}>
@@ -172,7 +172,7 @@ export default function SuperadminDashboardPage() {
         <div className="stat-card accent" onClick={() => router.push('/superadmin/tenants')} style={{ cursor: 'pointer', transition: 'all 0.2s' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Kayıtlı Oteller</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Kayıtlı İşletmeler</div>
               <div style={{ fontSize: 28, fontWeight: 800, marginTop: 4 }}>{stats.totalTenants}</div>
             </div>
             <Building2 size={24} style={{ color: 'var(--accent)' }} />
@@ -192,7 +192,7 @@ export default function SuperadminDashboardPage() {
             <TrendingUp size={24} style={{ color: 'var(--success)' }} />
           </div>
           <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
-            Otellerdeki toplam harcama hacmi
+            İşletmelerdeki toplam harcama hacmi
           </div>
         </div>
 
@@ -256,7 +256,7 @@ export default function SuperadminDashboardPage() {
           {/* Recent Hotels */}
           <div className="glass-card" style={{ padding: '24px 20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Son Kayıt Olan Oteller</h3>
+              <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Son Kayıt Olan İşletmeler</h3>
               <button className="btn btn-ghost btn-sm" onClick={() => router.push('/superadmin/tenants')} style={{ fontSize: 12, padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
                 Tümünü Yönet <ArrowRight size={12} />
               </button>
@@ -268,12 +268,12 @@ export default function SuperadminDashboardPage() {
                 Yükleniyor...
               </div>
             ) : recentTenants.length === 0 ? (
-              <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, padding: 20 }}>Henüz hiçbir otel kaydı bulunmuyor.</p>
+              <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, padding: 20 }}>Henüz hiçbir işletme kaydı bulunmuyor.</p>
             ) : (
               <table className="data-table" style={{ fontSize: 13 }}>
                 <thead>
                   <tr>
-                    <th>Otel Adı</th>
+                    <th>İşletme Adı</th>
                     <th>Durum</th>
                     <th>Plan</th>
                     <th>Kayıt Tarihi</th>
@@ -378,7 +378,7 @@ export default function SuperadminDashboardPage() {
                 <div>
                   <strong>Aktivasyon Talebi Onayı</strong>
                   <p style={{ margin: '4px 0 0', fontSize: 12 }}>
-                    Yeni kayıt olan oteller pasif olarak kurulur. Ödeme alındığında veya donanım teslimatı tamamlandığında lisansı başlatmak için <strong>Ödemeler</strong> menüsünü kullanın.
+                    Yeni kayıt olan işletmeler pasif olarak kurulur. Ödeme alındığında veya donanım teslimatı tamamlandığında lisansı başlatmak için <strong>Ödemeler</strong> menüsünü kullanın.
                   </p>
                 </div>
               </div>
@@ -451,7 +451,7 @@ export default function SuperadminDashboardPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>
                     <span>Premium Plan</span>
-                    <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{allTenants.filter(t => t.subscription_plan === 'premium').length} Otel</span>
+                    <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{allTenants.filter(t => t.subscription_plan === 'premium').length} İşletme</span>
                   </div>
                   <div style={{ height: 6, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
                     <div style={{ width: `${stats.totalTenants ? (allTenants.filter(t => t.subscription_plan === 'premium').length / stats.totalTenants) * 100 : 0}%`, background: 'linear-gradient(90deg, var(--accent), var(--accent-light))', height: '100%' }} />
@@ -462,10 +462,10 @@ export default function SuperadminDashboardPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>
                     <span>Standart Plan</span>
-                    <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{allTenants.filter(t => t.subscription_plan === 'standard').length} Otel</span>
+                    <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{allTenants.filter(t => t.subscription_plan === 'basic').length} İşletme</span>
                   </div>
                   <div style={{ height: 6, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
-                    <div style={{ width: `${stats.totalTenants ? (allTenants.filter(t => t.subscription_plan === 'standard').length / stats.totalTenants) * 100 : 0}%`, background: 'var(--info)', height: '100%' }} />
+                    <div style={{ width: `${stats.totalTenants ? (allTenants.filter(t => t.subscription_plan === 'basic').length / stats.totalTenants) * 100 : 0}%`, background: 'var(--info)', height: '100%' }} />
                   </div>
                 </div>
 
@@ -473,7 +473,7 @@ export default function SuperadminDashboardPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>
                     <span>Lisanssız / Yok</span>
-                    <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{allTenants.filter(t => !t.subscription_plan || t.subscription_plan === 'none').length} Otel</span>
+                    <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{allTenants.filter(t => !t.subscription_plan || t.subscription_plan === 'none').length} İşletme</span>
                   </div>
                   <div style={{ height: 6, borderRadius: 3, background: 'var(--border)', overflow: 'hidden' }}>
                     <div style={{ width: `${stats.totalTenants ? (allTenants.filter(t => !t.subscription_plan || t.subscription_plan === 'none').length / stats.totalTenants) * 100 : 0}%`, background: 'var(--border-light)', height: '100%' }} />

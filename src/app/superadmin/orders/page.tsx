@@ -160,7 +160,7 @@ export default function HardwareOrdersPage() {
       <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
         <div style={{ position: 'relative', maxWidth: 320, width: '100%' }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
-          <input className="input" placeholder="Otel adı veya kargo takip no ara..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 38 }} />
+          <input className="input" placeholder="İşletme adı veya kargo takip no ara..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 38 }} />
         </div>
         <button className="btn btn-ghost btn-sm" onClick={loadData} disabled={isLoading}>
           <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> Yenile
@@ -183,7 +183,7 @@ export default function HardwareOrdersPage() {
           <table className="data-table">
             <thead>
               <tr>
-                <th>Otel</th>
+                <th>İşletme</th>
                 <th>Sipariş Detayı</th>
                 <th>Sipariş Tarihi</th>
                 <th>Kargo Durumu</th>
@@ -258,7 +258,7 @@ export default function HardwareOrdersPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label className="input-label">Otel Seçin</label>
+                <label className="input-label">İşletme Seçin</label>
                 <select className="input" value={selectedTenantId} onChange={(e) => setSelectedTenantId(e.target.value)}>
                   {tenants.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
@@ -310,7 +310,7 @@ export default function HardwareOrdersPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ fontSize: 13, color: 'var(--muted)', background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, border: '1px solid var(--border)' }}>
-                <strong>Otel:</strong> {selectedOrder.tenant_name} <br/>
+                <strong>İşletme:</strong> {selectedOrder.tenant_name} <br/>
                 <strong>İçerik:</strong> {selectedOrder.details}
               </div>
 
