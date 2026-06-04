@@ -204,6 +204,17 @@ function ReceptionPageContent() {
   const handleCheckinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenant?.id) return;
+
+    // Check if NFC is enabled on Android
+    if (typeof window !== 'undefined' && (window as any).AndroidBridge && typeof (window as any).AndroidBridge.checkNfcStatus === 'function') {
+      const nfcStatus = (window as any).AndroidBridge.checkNfcStatus();
+      if (nfcStatus === 'disabled') {
+        setErrorCheckin('Cihazınızın NFC özelliği kapalıdır. Lütfen ayarlardan NFC özelliğini etkinleştirin.');
+        playBeep('error');
+        return;
+      }
+    }
+
     if (!selectedRoomId) {
       setErrorCheckin(`Lütfen bir ${t.roomLabel.toLowerCase()} seçin.`);
       playBeep('error');

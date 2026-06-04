@@ -50,15 +50,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
-    { href: '/dashboard', label: 'Genel Bakış', icon: <LayoutDashboard size={18} /> },
-    { href: '/dashboard/reception', label: t.receptionLabel, icon: <ConciergeBell size={18} /> },
-    { href: '/dashboard/rooms', label: t.roomsLabel, icon: <DoorOpen size={18} /> },
-    { href: '/dashboard/guests', label: t.guestsLabel, icon: <Users size={18} /> },
-    { href: '/dashboard/users', label: 'Personel', icon: <UserCheck size={18} /> },
-    { href: '/dashboard/reports', label: 'Raporlar', icon: <BarChart3 size={18} /> },
-    { href: '/dashboard/transactions', label: 'İşlemler', icon: <ArrowLeftRight size={18} /> },
-    { href: '/dashboard/settings', label: 'Ayarlar', icon: <Settings size={18} /> },
+    { href: '/dashboard', label: 'Genel Bakış', icon: <LayoutDashboard size={18} />, roles: ['hotel_admin', 'manager', 'platform_owner'] },
+    { href: '/dashboard/reception', label: t.receptionLabel, icon: <ConciergeBell size={18} />, roles: ['hotel_admin', 'manager', 'receptionist', 'platform_owner'] },
+    { href: '/dashboard/rooms', label: t.roomsLabel, icon: <DoorOpen size={18} />, roles: ['hotel_admin', 'manager', 'receptionist', 'platform_owner'] },
+    { href: '/dashboard/guests', label: t.guestsLabel, icon: <Users size={18} />, roles: ['hotel_admin', 'manager', 'receptionist', 'platform_owner'] },
+    { href: '/dashboard/users', label: 'Personel', icon: <UserCheck size={18} />, roles: ['hotel_admin', 'platform_owner'] },
+    { href: '/dashboard/reports', label: 'Raporlar', icon: <BarChart3 size={18} />, roles: ['hotel_admin', 'manager', 'platform_owner'] },
+    { href: '/dashboard/transactions', label: 'İşlemler', icon: <ArrowLeftRight size={18} />, roles: ['hotel_admin', 'manager', 'platform_owner'] },
+    { href: '/dashboard/settings', label: 'Ayarlar', icon: <Settings size={18} />, roles: ['hotel_admin', 'platform_owner'] },
   ];
+
+  // Path-role authorization mapping
+  const pathPermissions: Record<string, string[]> = {
+    '/dashboard': ['hotel_admin', 'manager', 'platform_owner'],
+    '/dashboard/reception': ['hotel_admin', 'manager', 'receptionist', 'platform_owner'],
+    '/dashboard/rooms': ['hotel_admin', 'manager', 'receptionist', 'platform_owner'],
+    '/dashboard/guests': ['hotel_admin', 'manager', 'receptionist', 'platform_owner'],
+    '/dashboard/users': ['hotel_admin', 'platform_owner'],
+    '/dashboard/reports': ['hotel_admin', 'manager', 'platform_owner'],
+    '/dashboard/transactions': ['hotel_admin', 'manager', 'platform_owner'],
+    '/dashboard/settings': ['hotel_admin', 'platform_owner'],
+  };
+
+  const checkPathAccess = React.useCallback((currentPath: string, userRole: string): boolean => {
+    const keys = Object.keys(pathPermissions).sort((a, b) => b.length - a.length);
+    for (const key of keys) {
+      if (currentPath === key || currentPath.startsWith(key + '/')) {
+        return pathPermissions[key].includes(userRole);
+      }
+    }
+    return false;
+  }, []);
+
+  const getDefaultPath = React.useCallback((userRole: string): string => {
+    if (['hotel_admin', 'manager', 'platform_owner'].includes(userRole)) return '/dashboard';
+    if (userRole === 'receptionist') return '/dashboard/reception';
+    return '/pos';
+  }, []);
 
   // RFID States
   const [scannedCardUid, setScannedCardUid] = useState<string | null>(null);
@@ -147,14 +175,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [tenant?.id]);
 
   useEffect(() => {
-    if (profile) {
-      if (profile.role === 'super_admin') {
+    if (!isLoading) {
+      if (!profile) {
+        router.push('/login');
+        return;
+      }
+
+      const role = profile.role;
+      if (role === 'super_admin') {
         router.push('/superadmin');
-      } else if (['waiter', 'cashier'].includes(profile.role)) {
+        return;
+      }
+      if (['waiter', 'cashier'].includes(role)) {
         router.push('/pos');
+        return;
+      }
+
+      const hasAccess = checkPathAccess(pathname, role);
+      if (!hasAccess) {
+        const defaultPath = getDefaultPath(role);
+        router.push(defaultPath);
       }
     }
-  }, [profile, router]);
+  }, [profile, pathname, router, isLoading, checkPathAccess, getDefaultPath]);
+
+  const hasAccess = profile && checkPathAccess(pathname, profile.role);
+  const filteredNavItems = navItems.filter((item) => profile && item.roles.includes(profile.role));
 
   const isExpired = tenant?.subscription_expires_at ? new Date(tenant.subscription_expires_at) < new Date() : false;
   const showLockScreen = profile?.role !== 'super_admin' && (tenant?.status !== 'active' || isExpired);
@@ -165,6 +211,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         Yükleniyor...
       </div>
     );
+  }
+
+  if (!profile || !hasAccess) {
+    return null;
   }
 
   if (showLockScreen) {
@@ -211,7 +261,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Navigation */}
         <nav style={{ flex: 1, padding: '12px 0' }}>
-          {navItems.map((item) => (
+          {filteredNavItems.map((item) => (
             <button
               key={item.href}
               className={`sidebar-link ${pathname === item.href ? 'active' : ''}`}

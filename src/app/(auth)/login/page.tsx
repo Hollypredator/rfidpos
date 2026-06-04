@@ -23,6 +23,8 @@ function LoginContent() {
       let redirectPath = '/dashboard';
       if (role === 'super_admin') {
         redirectPath = '/superadmin';
+      } else if (role === 'receptionist') {
+        redirectPath = '/dashboard/reception';
       } else if (['waiter', 'cashier'].includes(role)) {
         redirectPath = '/pos';
       }
@@ -55,6 +57,8 @@ function LoginContent() {
       let redirectPath = '/dashboard';
       if (role === 'super_admin') {
         redirectPath = '/superadmin';
+      } else if (role === 'receptionist') {
+        redirectPath = '/dashboard/reception';
       } else if (role === 'waiter' || role === 'cashier') {
         redirectPath = '/pos';
       }

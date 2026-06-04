@@ -83,10 +83,16 @@ export default function POSPage() {
   const tenantId = tenant?.id || 'mock-tenant-id';
 
   useEffect(() => {
-    if (profile && profile.role === 'super_admin') {
-      router.push('/superadmin');
+    if (!isLoading) {
+      if (!profile) {
+        router.push('/login');
+        return;
+      }
+      if (profile.role === 'super_admin' || profile.role === 'platform_owner') {
+        router.push('/superadmin');
+      }
     }
-  }, [profile, router]);
+  }, [profile, isLoading, router]);
 
   useEffect(() => {
     if (profile) {
@@ -289,6 +295,19 @@ export default function POSPage() {
     }
   }, [isOnline]);
 
+  // Android Javascript Bridge Listener for POS card scanning
+  useEffect(() => {
+    const handleAndroidCard = (uid: string) => {
+      if (isNfcModalOpen && paymentStatus === 'scanning') {
+        processCardScan(uid);
+      }
+    };
+    (window as any).handleRFIDCard = handleAndroidCard;
+    return () => {
+      delete (window as any).handleRFIDCard;
+    };
+  }, [isNfcModalOpen, paymentStatus]);
+
   const isExpired = tenant?.subscription_expires_at ? new Date(tenant.subscription_expires_at) < new Date() : false;
   const showLockScreen = profile?.role !== 'super_admin' && (tenant?.status !== 'active' || isExpired);
 
@@ -298,6 +317,10 @@ export default function POSPage() {
         Yükleniyor...
       </div>
     );
+  }
+
+  if (!profile || profile.role === 'super_admin' || profile.role === 'platform_owner') {
+    return null;
   }
 
   if (showLockScreen) {
@@ -445,6 +468,17 @@ export default function POSPage() {
 
   // Triggered when an RFID code is read (via mock list click or keyboard event)
   const processCardScan = async (scannedUid: string) => {
+    // Check if NFC is enabled on Android
+    if (typeof window !== 'undefined' && (window as any).AndroidBridge && typeof (window as any).AndroidBridge.checkNfcStatus === 'function') {
+      const nfcStatus = (window as any).AndroidBridge.checkNfcStatus();
+      if (nfcStatus === 'disabled') {
+        alert('Cihazınızın NFC özelliği kapalıdır. Lütfen ayarlardan NFC özelliğini etkinleştirin.');
+        setPaymentStatus('error');
+        setPaymentMessage('Hata: Cihazınızın NFC özelliği kapalıdır.');
+        return;
+      }
+    }
+
     const cleanUid = scannedUid.trim();
     if (!cleanUid) return;
 

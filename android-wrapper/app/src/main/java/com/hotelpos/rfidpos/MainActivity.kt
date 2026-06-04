@@ -23,7 +23,16 @@ class MainActivity : AppCompatActivity() {
     private var pendingIntent: PendingIntent? = null
 
     // Target URL - Change this to your production URL when deploying
-    private val targetUrl = "https://rfidpos.vercel.app/login"
+    private val targetUrl = "https://rfidpos.vercel.app/"
+
+    // Broadcast receiver for NFC adapter state changes
+    private val nfcStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (NfcAdapter.ACTION_ADAPTER_STATE_CHANGED == intent?.action) {
+                checkAndNotifyNfcStatus()
+            }
+        }
+    }
 
     // Broadcast receiver for specific hand-held terminals (Sunmi, iMin, etc.)
     private val rfidBroadcastReceiver = object : BroadcastReceiver() {
@@ -94,6 +103,11 @@ class MainActivity : AppCompatActivity() {
                 url?.let { view?.loadUrl(it) }
                 return true
             }
+
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                checkAndNotifyNfcStatus()
+            }
         }
         webView.webChromeClient = WebChromeClient()
 
@@ -123,6 +137,9 @@ class MainActivity : AppCompatActivity() {
             @Suppress("UnspecifiedRegisterReceiverFlag")
             registerReceiver(rfidBroadcastReceiver, filter)
         }
+
+        // Register NFC state change receiver
+        registerReceiver(nfcStateReceiver, IntentFilter(NfcAdapter.ACTION_ADAPTER_STATE_CHANGED))
     }
 
     override fun onPause() {
@@ -133,6 +150,11 @@ class MainActivity : AppCompatActivity() {
         // Unregister broadcast receivers
         try {
             unregisterReceiver(rfidBroadcastReceiver)
+        } catch (e: Exception) {
+            // Already unregistered
+        }
+        try {
+            unregisterReceiver(nfcStateReceiver)
         } catch (e: Exception) {
             // Already unregistered
         }

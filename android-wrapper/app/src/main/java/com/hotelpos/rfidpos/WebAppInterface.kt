@@ -21,11 +21,15 @@ class WebAppInterface(private val context: Context, private val webView: WebView
      */
     @JavascriptInterface
     fun checkNfcStatus(): String {
-        val nfcAdapter = NfcAdapter.getDefaultAdapter(context)
-        return when {
-            nfcAdapter == null -> "not_supported"
-            !nfcAdapter.isEnabled -> "disabled"
-            else -> "enabled"
+        return try {
+            val nfcAdapter = NfcAdapter.getDefaultAdapter(context)
+            when {
+                nfcAdapter == null -> "not_supported"
+                !nfcAdapter.isEnabled -> "disabled"
+                else -> "enabled"
+            }
+        } catch (e: Exception) {
+            "disabled"
         }
     }
 

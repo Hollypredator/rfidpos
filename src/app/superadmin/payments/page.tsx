@@ -14,6 +14,7 @@ export default function PaymentsLedgerPage() {
   const [tenants, setTenants] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [selectedTab, setSelectedTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   
   // New Payment Form Modal
   const [showAddModal, setShowAddModal] = useState(false);
@@ -141,16 +142,29 @@ export default function PaymentsLedgerPage() {
     }
   };
 
-  const filtered = payments.filter(p =>
-    p.tenant_name.toLowerCase().includes(search.toLowerCase()) ||
-    p.sender_name.toLowerCase().includes(search.toLowerCase()) ||
-    p.reference_code.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = payments.filter(p => {
+    const matchesSearch = 
+      p.tenant_name.toLowerCase().includes(search.toLowerCase()) ||
+      p.sender_name.toLowerCase().includes(search.toLowerCase()) ||
+      p.reference_code.toLowerCase().includes(search.toLowerCase());
+    
+    const matchesTab = selectedTab === 'all' || p.status === selectedTab;
+    return matchesSearch && matchesTab;
+  });
+
+  // Calculate Metrics
+  const totalProcessedVolume = payments
+    .filter(p => p.status === 'approved')
+    .reduce((sum, p) => sum + Number(p.amount), 0);
+  const pendingCount = payments.filter(p => p.status === 'pending').length;
+  const pendingVolume = payments
+    .filter(p => p.status === 'pending')
+    .reduce((sum, p) => sum + Number(p.amount), 0);
 
   return (
     <div>
       {/* Header */}
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 className="page-title">Manuel Ödemeler & Havale Defteri</h1>
           <p className="page-subtitle">Banka havalesi ile yapılan donanım ve lisans ödemelerini doğrulayıp onaylayın.</p>
@@ -160,15 +174,90 @@ export default function PaymentsLedgerPage() {
         </button>
       </div>
 
-      {/* Search bar */}
-      <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+      {/* Metrics Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
+        <div className="stat-card success" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 18 }}>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Toplam Onaylanan Tahsilat</div>
+            <div style={{ fontSize: 22, fontWeight: 800, marginTop: 6, color: 'var(--success)' }}>
+              ₺{totalProcessedVolume.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+          <Coins size={24} style={{ color: 'var(--success)', opacity: 0.8 }} />
+        </div>
+
+        <div className={`stat-card ${pendingCount > 0 ? 'warning' : 'muted'}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 18 }}>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Onay Bekleyen İşlem</div>
+            <div style={{ fontSize: 22, fontWeight: 800, marginTop: 6 }}>
+              {pendingCount} Adet
+            </div>
+          </div>
+          <AlertCircle size={24} style={{ color: pendingCount > 0 ? 'var(--warning)' : 'var(--muted)', opacity: 0.8 }} />
+        </div>
+
+        <div className="stat-card accent" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 18 }}>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Bekleyen Ödeme Tutarı</div>
+            <div style={{ fontSize: 22, fontWeight: 800, marginTop: 6, color: 'var(--accent-light)' }}>
+              ₺{pendingVolume.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+          <Banknote size={24} style={{ color: 'var(--accent)', opacity: 0.8 }} />
+        </div>
+      </div>
+
+      {/* Filters and Tabs */}
+      <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+          {/* Quick Filter Tabs */}
+          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+            <button 
+              type="button"
+              className={`btn btn-sm ${selectedTab === 'all' ? 'btn-primary' : 'btn-ghost'}`} 
+              onClick={() => setSelectedTab('all')}
+              style={{ fontSize: 12 }}
+            >
+              Tümü ({payments.length})
+            </button>
+            <button 
+              type="button"
+              className={`btn btn-sm ${selectedTab === 'pending' ? 'btn-primary' : 'btn-ghost'}`} 
+              onClick={() => setSelectedTab('pending')}
+              style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              Bekleyenler ({payments.filter(p => p.status === 'pending').length})
+            </button>
+            <button 
+              type="button"
+              className={`btn btn-sm ${selectedTab === 'approved' ? 'btn-primary' : 'btn-ghost'}`} 
+              onClick={() => setSelectedTab('approved')}
+              style={{ fontSize: 12 }}
+            >
+              Onaylananlar ({payments.filter(p => p.status === 'approved').length})
+            </button>
+            <button 
+              type="button"
+              className={`btn btn-sm ${selectedTab === 'rejected' ? 'btn-primary' : 'btn-ghost'}`} 
+              onClick={() => setSelectedTab('rejected')}
+              style={{ fontSize: 12 }}
+            >
+              Reddedilenler ({payments.filter(p => p.status === 'rejected').length})
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button className="btn btn-ghost btn-sm" onClick={loadData} disabled={isLoading}>
+              <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> Yenile
+            </button>
+          </div>
+        </div>
+
+        {/* Search Input */}
         <div style={{ position: 'relative', maxWidth: 320, width: '100%' }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
-          <input className="input" placeholder="İşletme, gönderen veya referans ara..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 38 }} />
+          <input className="input" placeholder="İşletme, gönderen veya referans ara..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 38, height: 38 }} />
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={loadData} disabled={isLoading}>
-          <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> Yenile
-        </button>
       </div>
 
       {/* Payments Table */}
@@ -184,71 +273,73 @@ export default function PaymentsLedgerPage() {
             <p>Eşleşen ödeme kaydı bulunamadı</p>
           </div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>İşletme</th>
-                <th>Gönderen & Banka</th>
-                <th>Tutar</th>
-                <th>Referans ID (İşletme ID)</th>
-                <th>Tarih</th>
-                <th>Durum</th>
-                <th style={{ textAlign: 'right' }}>İşlemler</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => (
-                <tr key={p.id} className="table-row-hover">
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{p.tenant_name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'monospace' }}>ID: {p.tenant_id}</div>
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 500 }}>{p.sender_name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>{p.bank_name}</div>
-                  </td>
-                  <td style={{ fontWeight: 700, color: 'var(--success)' }}>
-                    ₺{Number(p.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td>
-                    <code style={{ fontSize: 11, color: 'var(--accent-light)' }}>{p.reference_code}</code>
-                  </td>
-                  <td style={{ fontSize: 13, color: 'var(--muted)' }}>
-                    {new Date(p.created_at).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  </td>
-                  <td>
-                    {p.status === 'pending' && <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><AlertCircle size={10} /> Beklemede</span>}
-                    {p.status === 'approved' && <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckCircle size={10} /> Onaylandı</span>}
-                    {p.status === 'rejected' && <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Ban size={10} /> Reddedildi</span>}
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    {p.status === 'pending' ? (
-                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                        <button 
-                          className="btn btn-success btn-sm" 
-                          onClick={() => handleApprove(p)} 
-                          style={{ padding: '4px 10px', height: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
-                          title="Ödemeyi Onayla ve Lisansı Etkinleştir"
-                        >
-                          <Check size={14} /> Onayla (+365 Gün)
-                        </button>
-                        <button 
-                          className="btn btn-danger btn-sm" 
-                          onClick={() => handleReject(p)}
-                          style={{ padding: '4px 8px', height: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
-                          title="Ödeme Bildirimini Reddet"
-                        >
-                          <X size={14} /> Reddet
-                        </button>
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>Tamamlandı</span>
-                    )}
-                  </td>
+          <div className="table-responsive">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>İşletme</th>
+                  <th>Gönderen & Banka</th>
+                  <th>Tutar</th>
+                  <th>Referans ID (İşletme ID)</th>
+                  <th>Tarih</th>
+                  <th>Durum</th>
+                  <th style={{ textAlign: 'right' }}>İşlemler</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((p) => (
+                  <tr key={p.id} className="table-row-hover">
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{p.tenant_name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'monospace' }}>ID: {p.tenant_id}</div>
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 500 }}>{p.sender_name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--muted)' }}>{p.bank_name}</div>
+                    </td>
+                    <td style={{ fontWeight: 700, color: p.status === 'approved' ? 'var(--success)' : p.status === 'rejected' ? 'var(--danger)' : 'var(--warning)' }}>
+                      ₺{Number(p.amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td>
+                      <code style={{ fontSize: 11, color: 'var(--accent-light)' }}>{p.reference_code}</code>
+                    </td>
+                    <td style={{ fontSize: 13, color: 'var(--muted)' }}>
+                      {new Date(p.created_at).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </td>
+                    <td>
+                      {p.status === 'pending' && <span className="badge badge-warning" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><AlertCircle size={10} /> Beklemede</span>}
+                      {p.status === 'approved' && <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CheckCircle size={10} /> Onaylandı</span>}
+                      {p.status === 'rejected' && <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Ban size={10} /> Reddedildi</span>}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      {p.status === 'pending' ? (
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                          <button 
+                            className="btn btn-success btn-sm" 
+                            onClick={() => handleApprove(p)} 
+                            style={{ padding: '6px 12px', height: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}
+                            title="Ödemeyi Onayla ve Lisansı Etkinleştir"
+                          >
+                            <Check size={14} /> Onayla (+365 Gün)
+                          </button>
+                          <button 
+                            className="btn btn-danger btn-sm" 
+                            onClick={() => handleReject(p)}
+                            style={{ padding: '6px 10px', height: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}
+                            title="Ödeme Bildirimini Reddet"
+                          >
+                            <X size={14} /> Reddet
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic', paddingRight: 8 }}>Tamamlandı</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
