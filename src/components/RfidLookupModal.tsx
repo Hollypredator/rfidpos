@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { createClient } from '../utils/supabase';
 import { Guest, Room, Transaction } from '../types';
+import { useTerminology } from '../hooks/useTerminology';
 
 interface RfidLookupModalProps {
   cardUid: string | null;
@@ -18,6 +19,7 @@ interface RfidLookupModalProps {
 export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: RfidLookupModalProps) {
   const { tenant } = useAuth();
   const supabase = createClient();
+  const t = useTerminology();
 
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -184,7 +186,7 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
           amount: amount,
           type: 'topup',
           location: 'reception',
-          description: 'Resepsiyon RFID Okuyucu ile Bakiye Yükleme',
+          description: `${t.receptionLabel} RFID Okuyucu ile Bakiye Yükleme`,
           performed_by: 'mock-receptionist-id' // default receptionist mock id
         });
 
@@ -211,7 +213,7 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
 
   const handleCheckout = async () => {
     if (!room || !guest) return;
-    const confirmMsg = `Oda ${room.room_number} (${guest.guest_name}) için Check-out yapılacak ve kalan ₺${Number(room.wallet_balance).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} iade edilecektir. Onaylıyor musunuz?`;
+    const confirmMsg = `${t.roomLabel} ${room.room_number} (${guest.guest_name}) için ${t.checkOutLabel} yapılacak ve kalan ₺${Number(room.wallet_balance).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} iade edilecektir. Onaylıyor musunuz?`;
     if (!confirm(confirmMsg)) return;
 
     setActionLoading(true);
@@ -231,19 +233,19 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
             amount: remainingBalance,
             type: 'charge', // charging the room wallet to 0 balance
             location: 'reception',
-            description: 'Check-out Bakiye İadesi / Sıfırlama',
+            description: `${t.checkOutLabel} Bakiye İadesi / Sıfırlama`,
             performed_by: 'mock-receptionist-id'
           });
       }
 
       // 2. Set Room Status to checked_out and balance to 0
       const { error: roomErr } = await supabase
-        .from('rooms')
-        .update({
-          status: 'checked_out',
-          wallet_balance: 0
-        })
-        .eq('id', room.id);
+          .from('rooms')
+          .update({
+            status: 'checked_out',
+            wallet_balance: 0
+          })
+          .eq('id', room.id);
 
       if (roomErr) throw roomErr;
 
@@ -256,14 +258,14 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
       if (guestErr) throw guestErr;
 
       playBeep('success');
-      alert('Check-out işlemi başarıyla tamamlandı. RFID kart boşa çıkarıldı ve havuza iade edildi.');
+      alert(`${t.checkOutLabel} işlemi başarıyla tamamlandı. RFID kart boşa çıkarıldı ve havuza iade edildi.`);
       
       if (onRefreshStats) onRefreshStats();
       handleClose();
 
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Check-out yapılırken hata oluştu.');
+      setError(err.message || `${t.checkOutLabel} yapılırken hata oluştu.`);
       playBeep('error');
     } finally {
       setActionLoading(false);
@@ -476,17 +478,17 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
                 opacity: 0.5
               }}>
                 <div>
-                  <span style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Aktif Misafir</span>
+                  <span style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>{t.activeGuestsLabel}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                     <User size={14} style={{ color: 'var(--muted)' }} />
-                    <span style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>Misafir İsmi Buraya Gelecek</span>
+                    <span style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>{t.guestLabel} İsmi Buraya Gelecek</span>
                   </div>
                 </div>
                 <div>
-                  <span style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Oda Numarası</span>
+                  <span style={{ fontSize: 9, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>{t.roomNoLabel}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                     <DoorOpen size={14} style={{ color: 'var(--muted)' }} />
-                    <span style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>Oda No Buraya Gelecek</span>
+                    <span style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>{t.roomLabel} No Buraya Gelecek</span>
                   </div>
                 </div>
               </div>
@@ -517,18 +519,18 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
                 }}>
                   BAKİYE GÖSTERGESİ
                 </div>
-                <span style={{ fontSize: 10, color: 'var(--accent-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mevcut Oda Bakiyesi</span>
+                <span style={{ fontSize: 10, color: 'var(--accent-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mevcut {t.roomBalanceLabel}</span>
                 <div style={{ fontSize: 26, fontWeight: 800, color: 'rgba(255,255,255,0.25)', marginTop: 4, fontFamily: 'monospace' }}>
                   ₺ *,***.**
                 </div>
                 <div style={{ fontSize: 9, color: 'var(--muted)', marginTop: 2, fontStyle: 'italic' }}>
-                  Okutulan kartın toplam bakiyesi burada görüntülenecektir.
+                  Okutulan kartın toplam {t.roomBalanceLabel.toLowerCase()} burada görüntülenecektir.
                 </div>
               </div>
 
               {/* Transactions List Placeholder */}
               <div>
-                <span style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: 6 }}>Odaya Ait Son İşlemler</span>
+                <span style={{ fontSize: 10, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600, display: 'block', marginBottom: 6 }}>{t.roomLabel} İşlem Geçmişi</span>
                 <div style={{ 
                   border: '1px dashed rgba(255,255,255,0.06)', 
                   borderRadius: 12, 
@@ -601,9 +603,9 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
             }}>
               <AlertCircle size={32} style={{ color: '#f59e0b' }} />
             </div>
-            <h4 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: '#f59e0b' }}>Tanımsız Kart Havuzu</h4>
+            <h4 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: '#f59e0b' }}>Tanımsız {t.roomLabel} Havuzu</h4>
             <p style={{ color: 'var(--muted)', fontSize: 14, maxWidth: 360, margin: '0 auto 24px', lineHeight: 1.5 }}>
-              Bu RFID kart (`{cardUid}`) şu an hiçbir aktif misafire veya odaya tanımlı değildir. Havuzda boşta beklemektedir.
+              Bu RFID kart (`{cardUid}`) şu an hiçbir aktif {t.guestLabel.toLowerCase()} veya {t.roomLabel.toLowerCase()} tanımına ait değildir. Havuzda boşta beklemektedir.
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
               {cardUid === 'manual' ? (
@@ -629,7 +631,7 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
                   window.location.href = `/dashboard/guests?scanUid=${activeUid || cardUid}`;
                 }}
               >
-                Yeni Misafire Tanımla
+                Yeni {t.guestLabel} Tanımla
               </button>
             </div>
           </div>
@@ -672,17 +674,17 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
               gap: 12
             }}>
               <div>
-                <span style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Aktif Misafir</span>
+                <span style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>{t.activeGuestsLabel}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                   <User size={16} style={{ color: 'var(--accent)' }} />
                   <span style={{ fontWeight: 650, fontSize: 14 }}>{guest.guest_name}</span>
                 </div>
               </div>
               <div>
-                <span style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Oda Numarası</span>
+                <span style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>{t.roomNoLabel}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                   <DoorOpen size={16} style={{ color: 'var(--accent)' }} />
-                  <span style={{ fontWeight: 650, fontSize: 14 }}>Oda {room?.room_number || '—'}</span>
+                  <span style={{ fontWeight: 650, fontSize: 14 }}>{t.roomLabel} {room?.room_number || '—'}</span>
                 </div>
               </div>
             </div>
@@ -697,7 +699,7 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
               position: 'relative',
               overflow: 'hidden'
             }}>
-              <span style={{ fontSize: 12, color: 'var(--accent-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mevcut Oda Bakiyesi</span>
+              <span style={{ fontSize: 12, color: 'var(--accent-light)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mevcut {t.roomBalanceLabel}</span>
               <div style={{ fontSize: 32, fontWeight: 900, color: 'white', marginTop: 6, fontFamily: 'monospace' }}>
                 ₺{Number(room?.wallet_balance || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
               </div>
@@ -758,7 +760,7 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
 
             {/* Recent Transactions List */}
             <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Odaya Ait Son İşlemler</label>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>{t.roomLabel} İşlem Geçmişi</label>
               <div style={{ 
                 border: '1px solid rgba(255,255,255,0.05)', 
                 borderRadius: 16, 
@@ -767,7 +769,7 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
               }}>
                 {recentTxs.length === 0 ? (
                   <div style={{ padding: 20, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-                    Bu odaya ait henüz işlem kaydı bulunmuyor.
+                    Bu {t.roomLabel.toLowerCase()} tanımına ait henüz işlem kaydı bulunmuyor.
                   </div>
                 ) : (
                   recentTxs.map((tx) => (
@@ -842,7 +844,7 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
                 }}
               >
                 <LogOut size={16} style={{ marginRight: 6 }} />
-                Check-out Yap
+                {t.checkOutLabel}
               </button>
             </div>
 
