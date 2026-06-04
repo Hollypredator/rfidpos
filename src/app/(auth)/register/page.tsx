@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CreditCard, Building2, User, Mail, Lock, Loader2, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -14,13 +14,34 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [allowSelfRegister, setAllowSelfRegister] = useState<boolean | null>(null);
 
   const { signUp } = useAuth();
   const router = useRouter();
 
+  useEffect(() => {
+    const saved = localStorage.getItem('rfid_platform_settings');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setAllowSelfRegister(!!parsed.allowSelfRegister);
+      } catch (e) {
+        console.error(e);
+        setAllowSelfRegister(false);
+      }
+    } else {
+      setAllowSelfRegister(false);
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!allowSelfRegister) {
+      setError('Kayıt alımları kapatılmıştır.');
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError('Şifreler eşleşmiyor.');
@@ -46,6 +67,44 @@ export default function RegisterPage() {
       }, 2000);
     }
   };
+
+  if (allowSelfRegister === null) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card" style={{ textAlign: 'center', padding: 40 }}>
+          <Loader2 size={24} className="animate-spin" style={{ color: 'var(--accent)', margin: '0 auto' }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (!allowSelfRegister) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card" style={{ textAlign: 'center', padding: '32px 24px' }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: '50%',
+            background: 'var(--danger-glow)',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            marginBottom: 20, color: 'var(--danger)'
+          }}>
+            <Lock size={28} />
+          </div>
+          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>Açık Kayıtlar Kapatılmıştır</h2>
+          <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5, marginBottom: 24 }}>
+            Sisteme yeni işletme kayıt alımları geçici olarak durdurulmuştur. İşletmenizi kaydettirmek için lütfen platform yöneticisi veya satış temsilcisi ile iletişime geçin.
+          </p>
+          <button 
+            className="btn btn-primary" 
+            onClick={() => router.push('/login')}
+            style={{ width: '100%' }}
+          >
+            Giriş Ekranına Dön
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (success) {
     return (

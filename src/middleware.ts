@@ -62,7 +62,7 @@ export async function middleware(request: NextRequest) {
       .single();
 
     const url = request.nextUrl.clone();
-    if (profile?.role === 'super_admin') {
+    if (profile?.role === 'super_admin' || profile?.role === 'platform_owner') {
       url.pathname = '/superadmin';
     } else if (profile?.role === 'hotel_admin' || profile?.role === 'manager') {
       url.pathname = '/dashboard';
@@ -79,13 +79,13 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (path.startsWith('/superadmin') && profile?.role !== 'super_admin') {
+    if (path.startsWith('/superadmin') && profile?.role !== 'super_admin' && profile?.role !== 'platform_owner') {
       const url = request.nextUrl.clone();
       url.pathname = '/dashboard';
       return NextResponse.redirect(url);
     }
 
-    if (path.startsWith('/dashboard') && !['hotel_admin', 'manager', 'super_admin'].includes(profile?.role || '')) {
+    if (path.startsWith('/dashboard') && !['hotel_admin', 'manager', 'super_admin', 'platform_owner'].includes(profile?.role || '')) {
       const url = request.nextUrl.clone();
       url.pathname = '/pos';
       return NextResponse.redirect(url);

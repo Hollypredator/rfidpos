@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     email VARCHAR(255) UNIQUE NOT NULL,
     avatar_url TEXT,
     role VARCHAR(50) NOT NULL DEFAULT 'waiter'
-        CHECK (role IN ('super_admin', 'hotel_admin', 'manager', 'receptionist', 'waiter', 'cashier')),
+        CHECK (role IN ('platform_owner', 'super_admin', 'hotel_admin', 'manager', 'receptionist', 'waiter', 'cashier')),
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     last_login_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -241,18 +241,18 @@ $$ LANGUAGE sql SECURITY DEFINER STABLE;
 -- TENANTS policies
 DROP POLICY IF EXISTS "tenants_select" ON tenants;
 CREATE POLICY "tenants_select" ON tenants FOR SELECT USING (
-    id = get_user_tenant_id() OR get_user_role() = 'super_admin'
+    id = get_user_tenant_id() OR get_user_role() IN ('super_admin', 'platform_owner')
 );
 -- Tenant oluşturma: super_admin veya henüz tenant'ı olmayan yeni kayıt kullanıcıları
 DROP POLICY IF EXISTS "tenants_insert" ON tenants;
 CREATE POLICY "tenants_insert" ON tenants FOR INSERT WITH CHECK (
-    get_user_role() = 'super_admin'
+    get_user_role() IN ('super_admin', 'platform_owner')
     OR (auth.uid() IS NOT NULL AND get_user_tenant_id() IS NULL)
 );
 DROP POLICY IF EXISTS "tenants_update" ON tenants;
 CREATE POLICY "tenants_update" ON tenants FOR UPDATE USING (
     (id = get_user_tenant_id() AND get_user_role() IN ('hotel_admin'))
-    OR get_user_role() = 'super_admin'
+    OR get_user_role() IN ('super_admin', 'platform_owner')
 );
 
 -- PROFILES policies
@@ -260,49 +260,49 @@ DROP POLICY IF EXISTS "profiles_select" ON profiles;
 CREATE POLICY "profiles_select" ON profiles FOR SELECT USING (
     id = auth.uid()
     OR (tenant_id = get_user_tenant_id() AND get_user_role() IN ('hotel_admin','manager'))
-    OR get_user_role() = 'super_admin'
+    OR get_user_role() IN ('super_admin', 'platform_owner')
 );
 DROP POLICY IF EXISTS "profiles_update" ON profiles;
 CREATE POLICY "profiles_update" ON profiles FOR UPDATE USING (
-    id = auth.uid() OR get_user_role() = 'super_admin'
+    id = auth.uid() OR get_user_role() IN ('super_admin', 'platform_owner')
 );
 
 -- ROOMS policies
 DROP POLICY IF EXISTS "rooms_all" ON rooms;
 CREATE POLICY "rooms_all" ON rooms FOR ALL USING (
-    tenant_id = get_user_tenant_id() OR get_user_role() = 'super_admin'
+    tenant_id = get_user_tenant_id() OR get_user_role() IN ('super_admin', 'platform_owner')
 );
 
 -- GUESTS policies
 DROP POLICY IF EXISTS "guests_all" ON guests;
 CREATE POLICY "guests_all" ON guests FOR ALL USING (
     room_id IN (SELECT id FROM rooms WHERE tenant_id = get_user_tenant_id())
-    OR get_user_role() = 'super_admin'
+    OR get_user_role() IN ('super_admin', 'platform_owner')
 );
 
 -- TRANSACTIONS policies
 DROP POLICY IF EXISTS "transactions_all" ON transactions;
 CREATE POLICY "transactions_all" ON transactions FOR ALL USING (
-    tenant_id = get_user_tenant_id() OR get_user_role() = 'super_admin'
+    tenant_id = get_user_tenant_id() OR get_user_role() IN ('super_admin', 'platform_owner')
 );
 
 -- LOCATIONS policies
 DROP POLICY IF EXISTS "locations_all" ON locations;
 CREATE POLICY "locations_all" ON locations FOR ALL USING (
-    tenant_id = get_user_tenant_id() OR get_user_role() = 'super_admin'
+    tenant_id = get_user_tenant_id() OR get_user_role() IN ('super_admin', 'platform_owner')
 );
 
 -- DEVICES policies
 DROP POLICY IF EXISTS "devices_all" ON devices;
 CREATE POLICY "devices_all" ON devices FOR ALL USING (
-    tenant_id = get_user_tenant_id() OR get_user_role() = 'super_admin'
+    tenant_id = get_user_tenant_id() OR get_user_role() IN ('super_admin', 'platform_owner')
 );
 
 -- AUDIT_LOGS policies
 DROP POLICY IF EXISTS "audit_logs_select" ON audit_logs;
 CREATE POLICY "audit_logs_select" ON audit_logs FOR SELECT USING (
     tenant_id = get_user_tenant_id() AND get_user_role() IN ('hotel_admin','manager')
-    OR get_user_role() = 'super_admin'
+    OR get_user_role() IN ('super_admin', 'platform_owner')
 );
 DROP POLICY IF EXISTS "audit_logs_insert" ON audit_logs;
 CREATE POLICY "audit_logs_insert" ON audit_logs FOR INSERT WITH CHECK (true);
@@ -332,7 +332,7 @@ ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "tickets_all" ON tickets;
 CREATE POLICY "tickets_all" ON tickets FOR ALL USING (
-    tenant_id = get_user_tenant_id() OR get_user_role() = 'super_admin'
+    tenant_id = get_user_tenant_id() OR get_user_role() IN ('super_admin', 'platform_owner')
 );
 
 

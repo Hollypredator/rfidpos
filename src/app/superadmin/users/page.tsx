@@ -90,9 +90,9 @@ export default function SuperadminUsersPage() {
       return;
     }
     
-    // If not super admin, tenant must be selected
-    if (formRole !== 'super_admin' && !formTenantId) {
-      setFormError('Platform yöneticisi (Super Admin) dışındaki roller için bir Tesis/İşletme seçilmelidir.');
+    // If not super admin / platform owner, tenant must be selected
+    if (formRole !== 'super_admin' && formRole !== 'platform_owner' && !formTenantId) {
+      setFormError('Platform Yöneticisi veya Sahibi dışındaki roller için bir Tesis/İşletme seçilmelidir.');
       return;
     }
 
@@ -100,7 +100,7 @@ export default function SuperadminUsersPage() {
     setFormError(null);
 
     try {
-      const selectedTenantId = formRole === 'super_admin' ? null : formTenantId;
+      const selectedTenantId = (formRole === 'super_admin' || formRole === 'platform_owner') ? null : formTenantId;
 
       if (editingUser) {
         // Edit existing profile
@@ -163,8 +163,10 @@ export default function SuperadminUsersPage() {
 
   const getRoleBadge = (role: string) => {
     switch (role) {
+      case 'platform_owner':
+        return <span className="badge" style={{ backgroundColor: '#7c3aed', color: 'white', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Shield size={10} /> Platform Sahibi</span>;
       case 'super_admin':
-        return <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Shield size={10} /> Platform Sahibi</span>;
+        return <span className="badge badge-danger" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Shield size={10} /> Platform Yöneticisi</span>;
       case 'hotel_admin':
         return <span className="badge badge-warning">İşletme Admini</span>;
       case 'manager':
@@ -181,7 +183,7 @@ export default function SuperadminUsersPage() {
   };
 
   const filtered = users.filter(u =>
-    ['super_admin', 'hotel_admin', 'manager'].includes(u.role) && (
+    ['platform_owner', 'super_admin', 'hotel_admin', 'manager'].includes(u.role) && (
       u.full_name.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase())
     )
@@ -235,6 +237,7 @@ export default function SuperadminUsersPage() {
                   <th>Rol / Yetki</th>
                   <th>Bağlı Tesis / İşletme</th>
                   <th>Durum</th>
+                  <th>Son Giriş</th>
                   <th>Kayıt Tarihi</th>
                   <th style={{ textAlign: 'right' }}>İşlemler</th>
                 </tr>
@@ -248,7 +251,9 @@ export default function SuperadminUsersPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div style={{
                             width: 36, height: 36, borderRadius: '50%',
-                            background: user.role === 'super_admin'
+                            background: user.role === 'platform_owner'
+                              ? 'linear-gradient(135deg, #7c3aed, #4f46e5)'
+                              : user.role === 'super_admin'
                               ? 'linear-gradient(135deg, var(--danger), #dc2626)'
                               : 'linear-gradient(135deg, var(--accent), #4f46e5)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -264,9 +269,13 @@ export default function SuperadminUsersPage() {
                       </td>
                       <td>{getRoleBadge(user.role)}</td>
                       <td>
-                        {user.role === 'super_admin' ? (
-                          <span style={{ fontSize: 12, color: 'var(--danger)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {user.role === 'platform_owner' ? (
+                          <span style={{ fontSize: 12, color: '#7c3aed', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Shield size={12} /> Sistem / Platform Owner
+                          </span>
+                        ) : user.role === 'super_admin' ? (
+                          <span style={{ fontSize: 12, color: 'var(--danger)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Shield size={12} /> Sistem / Platform Yöneticisi
                           </span>
                         ) : userTenant ? (
                           <span style={{ fontSize: 12, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -287,6 +296,9 @@ export default function SuperadminUsersPage() {
                             <XCircle size={10} /> Pasif
                           </span>
                         )}
+                      </td>
+                      <td style={{ fontSize: 12, color: 'var(--muted)' }}>
+                        {user.last_login_at ? new Date(user.last_login_at).toLocaleString('tr-TR') : 'Hiç giriş yapmadı'}
                       </td>
                       <td style={{ fontSize: 13, color: 'var(--muted)' }}>
                         {user.created_at ? new Date(user.created_at).toLocaleDateString('tr-TR') : '—'}
@@ -375,20 +387,21 @@ export default function SuperadminUsersPage() {
                   onChange={(e) => {
                     const selectedRole = e.target.value;
                     setFormRole(selectedRole);
-                    if (selectedRole === 'super_admin') {
+                    if (selectedRole === 'super_admin' || selectedRole === 'platform_owner') {
                       setFormTenantId('');
                     } else if (tenants.length > 0 && !formTenantId) {
                       setFormTenantId(tenants[0].id);
                     }
                   }}
                 >
-                  <option value="super_admin">🛡️ Platform Sahibi (Super Admin / Platform Owner)</option>
+                  <option value="platform_owner">👑 Platform Sahibi (Platform Owner)</option>
+                  <option value="super_admin">🛡️ Platform Yöneticisi (Super Admin)</option>
                   <option value="hotel_admin">🏢 İşletme Admini / Sahibi</option>
                   <option value="manager">💼 İşletme Müdürü</option>
                 </select>
               </div>
 
-              {formRole !== 'super_admin' && (
+              {formRole !== 'super_admin' && formRole !== 'platform_owner' && (
                 <div>
                   <label className="input-label">Bağlı Olduğu Tesis / İşletme</label>
                   <select 

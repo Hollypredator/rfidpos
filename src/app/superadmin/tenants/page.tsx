@@ -19,7 +19,7 @@ export default function TenantsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'rooms' | 'devices' | 'txns' | 'edit'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'rooms' | 'devices' | 'txns' | 'edit' | 'history'>('overview');
 
   // Tenant Details States
   const [detailRooms, setDetailRooms] = useState<Room[]>([]);
@@ -37,6 +37,7 @@ export default function TenantsPage() {
   const [formPlan, setFormPlan] = useState<string>('none');
   const [formExpiresAt, setFormExpiresAt] = useState<string>('');
   const [formBusinessType, setFormBusinessType] = useState<'hotel' | 'entertainment'>('hotel');
+  const [formAdminNotes, setFormAdminNotes] = useState('');
   const [formSaving, setFormSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -104,6 +105,7 @@ export default function TenantsPage() {
     setFormPlan(tenant.subscription_plan || 'none');
     setFormExpiresAt(tenant.subscription_expires_at ? tenant.subscription_expires_at.split('T')[0] : '');
     setFormBusinessType((tenant.settings as any)?.business_type || 'hotel');
+    setFormAdminNotes((tenant.settings as any)?.admin_notes || '');
     setFormError(null);
 
     try {
@@ -139,9 +141,28 @@ export default function TenantsPage() {
     setFormError(null);
 
     try {
+      const planChanged = selectedTenant.subscription_plan !== formPlan;
+      const dateChanged = (selectedTenant.subscription_expires_at ? selectedTenant.subscription_expires_at.split('T')[0] : '') !== formExpiresAt;
+      
+      let updatedHistory = (selectedTenant.settings as any)?.subscription_history || [];
+      if (planChanged || dateChanged) {
+        updatedHistory = [
+          {
+            plan: formPlan,
+            expires_at: formExpiresAt ? new Date(formExpiresAt).toISOString() : null,
+            changed_at: new Date().toISOString(),
+            by: 'Platform Yöneticisi',
+            action: planChanged ? 'Plan Değişikliği' : 'Lisans Süresi Güncelleme'
+          },
+          ...updatedHistory
+        ];
+      }
+
       const updatedSettings = {
         ...(selectedTenant.settings || {}),
-        business_type: formBusinessType
+        business_type: formBusinessType,
+        admin_notes: formAdminNotes,
+        subscription_history: updatedHistory
       };
 
       const { error } = await supabase
@@ -497,6 +518,9 @@ export default function TenantsPage() {
               <button className={`btn btn-sm ${activeTab === 'txns' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('txns')}>
                 Son İşlemler
               </button>
+              <button className={`btn btn-sm ${activeTab === 'history' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('history')}>
+                Lisans Geçmişi
+              </button>
               <button className={`btn btn-sm ${activeTab === 'edit' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('edit')}>
                 İşletme Ayarlarını Düzenle
               </button>
@@ -555,6 +579,16 @@ export default function TenantsPage() {
                           </tbody>
                         </table>
                       </div>
+                    </div>
+
+                    {/* Admin Notes Section */}
+                    <div style={{ marginTop: 20, padding: 14, background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                      <div style={{ fontSize: 11, color: 'var(--danger)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Shield size={12} /> Sistem Admin Notları
+                      </div>
+                      <p style={{ fontSize: 13, margin: 0, whiteSpace: 'pre-wrap', color: (selectedTenant.settings as any)?.admin_notes ? 'var(--foreground)' : 'var(--muted)', fontStyle: (selectedTenant.settings as any)?.admin_notes ? 'normal' : 'italic' }}>
+                        {(selectedTenant.settings as any)?.admin_notes || 'Henüz admin notu eklenmemiş.'}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -697,6 +731,38 @@ export default function TenantsPage() {
                   </div>
                 )}
 
+                {/* Tab: Subscription History */}
+                {activeTab === 'history' && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 16 }}>Abonelik ve Lisans Geçmişi</div>
+                    {!(selectedTenant.settings as any)?.subscription_history || (selectedTenant.settings as any).subscription_history.length === 0 ? (
+                      <div style={{ padding: 24, border: '1px dashed var(--border)', borderRadius: 8, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
+                        Henüz abonelik geçmişi kaydı bulunmuyor. İlk plan veya bitiş tarihi değişikliğinde kayıtlar burada listelenecektir.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingLeft: 12, borderLeft: '2px solid var(--border)', marginLeft: 8 }}>
+                        {(selectedTenant.settings as any).subscription_history.map((item: any, idx: number) => (
+                          <div key={idx} style={{ position: 'relative' }}>
+                            <div style={{
+                              position: 'absolute', left: -17, top: 4, width: 8, height: 8, borderRadius: '50%',
+                              backgroundColor: idx === 0 ? 'var(--primary)' : 'var(--muted)',
+                              border: '2px solid var(--card-bg)'
+                            }} />
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{item.action || 'Lisans Güncellemesi'}</div>
+                            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+                              Plan: <strong style={{ color: 'var(--foreground)' }}>{item.plan === 'premium' ? 'Premium Plan' : item.plan === 'basic' ? 'Standart Plan' : 'Lisans Yok (Kilitli)'}</strong> 
+                              {item.expires_at && ` • Bitiş: ${new Date(item.expires_at).toLocaleDateString('tr-TR')}`}
+                            </div>
+                            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+                              {new Date(item.changed_at).toLocaleString('tr-TR')} • Yapan: {item.by}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Tab: Edit Form */}
                 {activeTab === 'edit' && (
                   <div>
@@ -745,7 +811,7 @@ export default function TenantsPage() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div style={{ gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                         <div>
                           <label className="input-label">İşletme Türü</label>
                           <select className="input" value={formBusinessType} onChange={(e) => setFormBusinessType(e.target.value as 'hotel' | 'entertainment')}>
@@ -758,6 +824,18 @@ export default function TenantsPage() {
                             * Tür değişimi mevcut konum/odaları silmez, ancak panel gösterimlerini günceller.
                           </span>
                         </div>
+                      </div>
+
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <label className="input-label">🛡️ Admin Notları</label>
+                        <textarea 
+                          className="input" 
+                          rows={3} 
+                          value={formAdminNotes} 
+                          onChange={(e) => setFormAdminNotes(e.target.value)} 
+                          placeholder="Bu işletmeye dair özel notları ekleyin (Yalnızca superadmin ve platform sahipleri görebilir)..."
+                          style={{ minHeight: 60, resize: 'vertical' }}
+                        />
                       </div>
 
                       <div style={{ display: 'flex', gap: 12, marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 16 }}>

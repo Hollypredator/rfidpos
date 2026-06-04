@@ -2,7 +2,7 @@
 // SaaS Multi-Tenant TypeScript Types
 // ══════════════════════════════════════════════
 
-export type UserRole = 'super_admin' | 'hotel_admin' | 'manager' | 'receptionist' | 'waiter' | 'cashier';
+export type UserRole = 'platform_owner' | 'super_admin' | 'hotel_admin' | 'manager' | 'receptionist' | 'waiter' | 'cashier';
 
 export type TenantStatus = 'active' | 'inactive' | 'suspended';
 export type RoomStatus = 'active' | 'occupied' | 'maintenance' | 'checked_out';

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Building2, CreditCard, Package, MessageSquare, 
-  LogOut, Shield, Sun, Moon, Menu, Users
+  LogOut, Shield, Sun, Moon, Menu, Users, Settings, History
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -16,6 +16,8 @@ const NAV_ITEMS = [
   { href: '/superadmin/payments', label: 'Ödemeler & Onay', icon: <CreditCard size={18} /> },
   { href: '/superadmin/orders', label: 'Donanım Siparişleri', icon: <Package size={18} /> },
   { href: '/superadmin/support', label: 'Destek Talepleri', icon: <MessageSquare size={18} /> },
+  { href: '/superadmin/audit', label: 'Denetim Logları', icon: <History size={18} /> },
+  { href: '/superadmin/settings', label: 'Ayarlar', icon: <Settings size={18} /> },
 ];
 
 export default function SuperadminLayout({ children }: { children: React.ReactNode }) {
@@ -26,7 +28,7 @@ export default function SuperadminLayout({ children }: { children: React.ReactNo
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   React.useEffect(() => {
-    if (profile && profile.role !== 'super_admin') {
+    if (profile && profile.role !== 'super_admin' && profile.role !== 'platform_owner') {
       if (['waiter', 'cashier'].includes(profile.role)) {
         router.push('/pos');
       } else {
@@ -149,7 +151,9 @@ export default function SuperadminLayout({ children }: { children: React.ReactNo
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <div style={{
               width: 36, height: 36, borderRadius: '50%',
-              background: 'linear-gradient(135deg, var(--danger), #dc2626)',
+              background: profile?.role === 'platform_owner' 
+                ? 'linear-gradient(135deg, #7c3aed, #4f46e5)'
+                : 'linear-gradient(135deg, var(--danger), #dc2626)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 14, fontWeight: 600, color: 'white', flexShrink: 0,
             }}>
@@ -157,7 +161,9 @@ export default function SuperadminLayout({ children }: { children: React.ReactNo
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{profile?.full_name || 'Sistem Yöneticisi'}</div>
-              <div style={{ fontSize: 11, color: 'var(--danger)', fontWeight: 500 }}>Platform Yöneticisi</div>
+              <div style={{ fontSize: 11, color: profile?.role === 'platform_owner' ? '#7c3aed' : 'var(--danger)', fontWeight: 500 }}>
+                {profile?.role === 'platform_owner' ? 'Platform Sahibi' : 'Platform Yöneticisi'}
+              </div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
