@@ -41,14 +41,14 @@ function LoginContent() {
       setError(signInError);
       setIsLoading(false);
     } else {
-      // Client-side role-based redirect
+      // Client-side role-based redirect (supports fun_ prefixed emails as well)
       const role = email.startsWith('super') 
         ? 'super_admin' 
-        : email.startsWith('waiter') 
+        : (email.startsWith('waiter') || email.includes('waiter'))
         ? 'waiter' 
-        : email.startsWith('receptionist') 
+        : (email.startsWith('receptionist') || email.includes('receptionist') || email.includes('kasa'))
         ? 'receptionist' 
-        : email.startsWith('cashier')
+        : (email.startsWith('cashier') || email.includes('cashier'))
         ? 'cashier'
         : 'hotel_admin';
 
@@ -128,7 +128,7 @@ function LoginContent() {
               />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => { setShowPassword(!showPassword)} }
                 style={{
                   position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
                   background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer',
@@ -156,7 +156,7 @@ function LoginContent() {
           <p style={{ fontSize: 13, color: 'var(--muted)' }}>
             Henüz hesabınız yok mu?{' '}
             <a href="/register" style={{ color: 'var(--accent-light)', textDecoration: 'none', fontWeight: 500 }}>
-              Otel Kaydı Oluştur
+              Kayıt Oluştur
             </a>
           </p>
         </div>
@@ -169,36 +169,75 @@ function LoginContent() {
           borderRadius: 'var(--radius-sm)',
           fontSize: 12
         }}>
-          <div style={{ fontWeight: 600, color: 'var(--accent-light)', marginBottom: 8, textAlign: 'center' }}>
+          <div style={{ fontWeight: 600, color: 'var(--accent-light)', marginBottom: 12, textAlign: 'center' }}>
             Yerel Geliştirici Demo Hesapları
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <button 
-              type="button"
-              onClick={() => { setEmail('admin@hotelpos.com'); setPassword('demo1234'); }}
-              className="btn btn-ghost"
-              style={{ justifyContent: 'flex-start', padding: '6px 10px', fontSize: 11, width: '100%', border: '1px solid var(--border)' }}
-            >
-              🔑 admin@hotelpos.com (Otel Admini)
-            </button>
-            <button 
-              type="button"
-              onClick={() => { setEmail('waiter@hotelpos.com'); setPassword('demo1234'); }}
-              className="btn btn-ghost"
-              style={{ justifyContent: 'flex-start', padding: '6px 10px', fontSize: 11, width: '100%', border: '1px solid var(--border)' }}
-            >
-              🔑 waiter@hotelpos.com (Garson - POS)
-            </button>
-            <button 
-              type="button"
-              onClick={() => { setEmail('receptionist@hotelpos.com'); setPassword('demo1234'); }}
-              className="btn btn-ghost"
-              style={{ justifyContent: 'flex-start', padding: '6px 10px', fontSize: 11, width: '100%', border: '1px solid var(--border)' }}
-            >
-              🔑 receptionist@hotelpos.com (Resepsiyonist)
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                🏨 OTEL KONSEPTİ
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <button 
+                  type="button"
+                  onClick={() => { setEmail('admin@hotelpos.com'); setPassword('demo1234'); }}
+                  className="btn btn-ghost"
+                  style={{ justifyContent: 'flex-start', padding: '6px 10px', fontSize: 11, width: '100%', border: '1px solid var(--border)' }}
+                >
+                  🔑 admin@hotelpos.com (Yönetici)
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => { setEmail('waiter@hotelpos.com'); setPassword('demo1234'); }}
+                  className="btn btn-ghost"
+                  style={{ justifyContent: 'flex-start', padding: '6px 10px', fontSize: 11, width: '100%', border: '1px solid var(--border)' }}
+                >
+                  🔑 waiter@hotelpos.com (Garson - POS)
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => { setEmail('receptionist@hotelpos.com'); setPassword('demo1234'); }}
+                  className="btn btn-ghost"
+                  style={{ justifyContent: 'flex-start', padding: '6px 10px', fontSize: 11, width: '100%', border: '1px solid var(--border)' }}
+                >
+                  🔑 receptionist@hotelpos.com (Resepsiyon)
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                🎡 EĞLENCE MERKEZİ KONSEPTİ
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <button 
+                  type="button"
+                  onClick={() => { setEmail('fun_admin@hotelpos.com'); setPassword('demo1234'); }}
+                  className="btn btn-ghost"
+                  style={{ justifyContent: 'flex-start', padding: '6px 10px', fontSize: 11, width: '100%', border: '1px solid var(--border)' }}
+                >
+                  🔑 fun_admin@hotelpos.com (Yönetici)
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => { setEmail('fun_waiter@hotelpos.com'); setPassword('demo1234'); }}
+                  className="btn btn-ghost"
+                  style={{ justifyContent: 'flex-start', padding: '6px 10px', fontSize: 11, width: '100%', border: '1px solid var(--border)' }}
+                >
+                  🔑 fun_waiter@hotelpos.com (Garson - POS)
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => { setEmail('fun_kasa@hotelpos.com'); setPassword('demo1234'); }}
+                  className="btn btn-ghost"
+                  style={{ justifyContent: 'flex-start', padding: '6px 10px', fontSize: 11, width: '100%', border: '1px solid var(--border)' }}
+                >
+                  🔑 fun_kasa@hotelpos.com (Kasa Görevlisi)
+                </button>
+              </div>
+            </div>
           </div>
-          <div style={{ color: 'var(--muted)', fontSize: 10, marginTop: 8, textAlign: 'center' }}>
+          <div style={{ color: 'var(--muted)', fontSize: 10, marginTop: 10, textAlign: 'center' }}>
             * Şifre alanına herhangi bir şey yazıp giriş yapabilirsiniz.
           </div>
         </div>
