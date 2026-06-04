@@ -133,16 +133,18 @@ export default function RegisterPage() {
       <div className="auth-card">
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{
-            width: 56, height: 56,
-            borderRadius: 16,
-            background: 'linear-gradient(135deg, var(--success), #059669)',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            marginBottom: 16,
-            boxShadow: '0 8px 32px rgba(16,185,129,0.25)'
-          }}>
-            <Building2 size={28} color="white" />
-          </div>
+          <img 
+            src="/logo.png" 
+            alt="RFID POS Logo" 
+            style={{ 
+              width: 80, 
+              height: 80, 
+              borderRadius: 16, 
+              objectFit: 'contain',
+              marginBottom: 16,
+              boxShadow: '0 8px 32px rgba(16,185,129,0.15)' 
+            }} 
+          />
           <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Otel Kaydı Oluştur</h1>
           <p style={{ fontSize: 14, color: 'var(--muted)' }}>RFID POS Sistemine otelinizi ekleyin</p>
         </div>

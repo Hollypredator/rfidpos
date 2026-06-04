@@ -73,16 +73,18 @@ function LoginContent() {
       <div className="auth-card">
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            width: 56, height: 56,
-            borderRadius: 16,
-            background: 'linear-gradient(135deg, var(--accent), #4f46e5)',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            marginBottom: 16,
-            boxShadow: '0 8px 32px rgba(99,102,241,0.25)'
-          }}>
-            <CreditCard size={28} color="white" />
-          </div>
+          <img 
+            src="/logo.png" 
+            alt="RFID POS Logo" 
+            style={{ 
+              width: 80, 
+              height: 80, 
+              borderRadius: 16, 
+              objectFit: 'contain',
+              marginBottom: 16,
+              boxShadow: '0 8px 32px rgba(99,102,241,0.15)' 
+            }} 
+          />
           <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>RFID POS Sistemi</h1>
           <p style={{ fontSize: 14, color: 'var(--muted)' }}>Hesabınıza giriş yapın</p>
         </div>

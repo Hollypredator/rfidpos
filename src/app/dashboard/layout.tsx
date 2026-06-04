@@ -260,13 +260,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           borderBottom: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', gap: 10,
         }}>
-          <div style={{
-            width: 36, height: 36, borderRadius: 10,
-            background: 'linear-gradient(135deg, var(--accent), #4f46e5)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <CreditCard size={20} color="white" />
-          </div>
+          <img 
+            src="/logo.png" 
+            alt="RFID POS Logo" 
+            style={{ 
+              width: 36, 
+              height: 36, 
+              borderRadius: 10, 
+              objectFit: 'contain',
+              flexShrink: 0 
+            }} 
+          />
           <div>
             <div style={{ fontSize: 14, fontWeight: 700 }}>RFID POS</div>
             <div style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>
