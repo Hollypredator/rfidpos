@@ -175,22 +175,6 @@ function LoginContent() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
               <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                🛡️ SİSTEM YÖNETİCİSİ
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <button 
-                  type="button"
-                  onClick={() => { setEmail('super@hotelpos.com'); setPassword('demo1234'); }}
-                  className="btn btn-ghost"
-                  style={{ justifyContent: 'flex-start', padding: '6px 10px', fontSize: 11, width: '100%', border: '1px solid var(--border)' }}
-                >
-                  🔑 super@hotelpos.com (Platform Owner)
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 🏨 OTEL KONSEPTİ
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

@@ -181,8 +181,10 @@ export default function SuperadminUsersPage() {
   };
 
   const filtered = users.filter(u =>
-    u.full_name.toLowerCase().includes(search.toLowerCase()) ||
-    u.email.toLowerCase().includes(search.toLowerCase())
+    ['super_admin', 'hotel_admin', 'manager'].includes(u.role) && (
+      u.full_name.toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase())
+    )
   );
 
   return (
@@ -190,11 +192,11 @@ export default function SuperadminUsersPage() {
       {/* Page Header */}
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 className="page-title">Sistem Kullanıcı Yönetimi</h1>
-          <p className="page-subtitle">SaaS platformuna kayıtlı Platform Sahipleri (Platform Owners / Super Admin) ve Otel personellerinin tamamını yönetin.</p>
+          <h1 className="page-title">İşletme ve Sistem Yönetimi</h1>
+          <p className="page-subtitle">SaaS platformunu yöneten Platform Sahiplerini (Platform Owner) ve otelleri yöneten İşletme Yöneticilerini (Otel Admini, Otel Müdürü) yönetin.</p>
         </div>
         <button className="btn btn-primary" onClick={openAddModal}>
-          <Plus size={16} /> Yeni Kullanıcı Ekle
+          <Plus size={16} /> Yeni Yönetici Ekle
         </button>
       </div>
 
@@ -383,9 +385,6 @@ export default function SuperadminUsersPage() {
                   <option value="super_admin">🛡️ Platform Sahibi (Super Admin / Platform Owner)</option>
                   <option value="hotel_admin">🏨 Otel Admini / İşletme Sahibi</option>
                   <option value="manager">💼 Otel Müdürü</option>
-                  <option value="receptionist">🛎️ Resepsiyonist / Kasa Görevlisi</option>
-                  <option value="cashier">💵 Kasiyer</option>
-                  <option value="waiter">🍽️ Garson (Sadece POS)</option>
                 </select>
               </div>
 
