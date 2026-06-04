@@ -267,14 +267,8 @@ const mockAuth = {
       userStr = null;
     }
 
-    if (!userStr || !user) {
-      const defaultUser = {
-        id: 'mock-user-id',
-        email: 'admin@hotelpos.com',
-        user_metadata: { full_name: 'Deneme Otel Yöneticisi', role: 'hotel_admin' },
-      };
-      localStorage.setItem('mock_user', JSON.stringify(defaultUser));
-      user = defaultUser;
+    if (!user) {
+      return Promise.resolve({ data: { session: null }, error: null });
     }
     return Promise.resolve({ data: { session: { user, access_token: 'mock-token' } }, error: null });
   },
@@ -291,15 +285,6 @@ const mockAuth = {
       userStr = null;
     }
 
-    if (!userStr || !user) {
-      const defaultUser = {
-        id: 'mock-user-id',
-        email: 'admin@hotelpos.com',
-        user_metadata: { full_name: 'Deneme Otel Yöneticisi', role: 'hotel_admin' },
-      };
-      localStorage.setItem('mock_user', JSON.stringify(defaultUser));
-      user = defaultUser;
-    }
     return Promise.resolve({ data: { user }, error: null });
   },
   onAuthStateChange: (callback: AuthChangeListener) => {
