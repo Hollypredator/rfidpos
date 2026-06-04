@@ -21,6 +21,7 @@ import {
   Moon
 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useRouter } from 'next/navigation';
 
 const FEATURES = [
   {
@@ -70,6 +71,16 @@ const HOW_IT_WORKS = [
 
 export default function LandingPage() {
   const { theme, toggleTheme } = useTheme();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const userAgent = window.navigator.userAgent || '';
+      if (userAgent.includes('RFIDPOS-Android')) {
+        router.push('/login');
+      }
+    }
+  }, [router]);
 
   return (
     <div style={{ background: 'var(--background)', color: 'var(--foreground)' }}>

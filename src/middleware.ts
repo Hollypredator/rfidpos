@@ -8,6 +8,16 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const isSupabaseConfigured = supabaseUrl && !supabaseUrl.includes('placeholder');
 
 export async function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+
+  // APK kullanıcıları için ana sayfayı pas geçip doğrudan login sayfasına yönlendir
+  const userAgent = request.headers.get('user-agent') || '';
+  if (userAgent.includes('RFIDPOS-Android') && path === '/') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    return NextResponse.redirect(url);
+  }
+
   // ── DEV MODE: No Supabase → allow all routes ──
   if (!isSupabaseConfigured) {
     return NextResponse.next();
@@ -34,15 +44,6 @@ export async function middleware(request: NextRequest) {
   });
 
   const { data: { user } } = await supabase.auth.getUser();
-  const path = request.nextUrl.pathname;
-
-  // APK kullanıcıları için ana sayfayı pas geçip doğrudan login sayfasına yönlendir
-  const userAgent = request.headers.get('user-agent') || '';
-  if (userAgent.includes('RFIDPOS-Android') && path === '/') {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
-  }
 
   const publicRoutes = ['/', '/login', '/register', '/forgot-password'];
   const isPublicRoute = publicRoutes.includes(path);
