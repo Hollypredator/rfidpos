@@ -39,6 +39,18 @@ const hardeningMigration = readFileSync(hardeningMigrationPath, 'utf8');
 
 assert.match(
   hardeningMigration,
+  /ALTER TABLE guests ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants\(id\) ON DELETE CASCADE/,
+  'production hardening migration must add guests.tenant_id for databases that already ran the original init migration'
+);
+
+assert.match(
+  hardeningMigration,
+  /UPDATE guests\s+SET tenant_id = rooms\.tenant_id\s+FROM rooms/,
+  'production hardening migration must backfill guests.tenant_id from rooms before enforcing card uniqueness'
+);
+
+assert.match(
+  hardeningMigration,
   /RAISE EXCEPTION 'Duplicate active card_uid found for tenant_id=%/,
   'migration must fail loudly when duplicate tenant-scoped card UIDs exist'
 );

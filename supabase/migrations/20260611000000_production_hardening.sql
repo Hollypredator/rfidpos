@@ -1,5 +1,30 @@
 -- Production hardening for tenant integrity, RLS write checks, and card ownership.
 
+ALTER TABLE guests ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE;
+
+UPDATE guests
+SET tenant_id = rooms.tenant_id
+FROM rooms
+WHERE guests.room_id = rooms.id
+  AND guests.tenant_id IS NULL;
+
+DO $$
+DECLARE
+  orphan_guest RECORD;
+BEGIN
+  SELECT id, room_id
+  INTO orphan_guest
+  FROM guests
+  WHERE tenant_id IS NULL
+  LIMIT 1;
+
+  IF FOUND THEN
+    RAISE EXCEPTION 'Guest tenant_id backfill failed for guest id=% room_id=%',
+      orphan_guest.id,
+      orphan_guest.room_id;
+  END IF;
+END $$;
+
 DO $$
 DECLARE
   duplicate_record RECORD;
@@ -19,6 +44,11 @@ BEGIN
       duplicate_record.duplicate_count;
   END IF;
 END $$;
+
+ALTER TABLE guests DROP CONSTRAINT IF EXISTS guests_card_uid_key;
+ALTER TABLE guests DROP CONSTRAINT IF EXISTS unique_tenant_card_uid;
+ALTER TABLE guests ADD CONSTRAINT unique_tenant_card_uid UNIQUE(tenant_id, card_uid);
+ALTER TABLE guests ALTER COLUMN tenant_id SET NOT NULL;
 
 DO $$
 DECLARE
