@@ -263,6 +263,67 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
+-- Repair Auth seed records for Supabase GoTrue.
+-- Direct auth.users inserts must not leave token fields NULL and must have email identities.
+UPDATE auth.users
+SET
+  confirmation_token = COALESCE(confirmation_token, ''),
+  recovery_token = COALESCE(recovery_token, ''),
+  email_change = COALESCE(email_change, ''),
+  email_change_token_new = COALESCE(email_change_token_new, ''),
+  email_change_token_current = COALESCE(email_change_token_current, ''),
+  reauthentication_token = COALESCE(reauthentication_token, '')
+WHERE email IN (
+  'admin@hotelpos.com',
+  'waiter@hotelpos.com',
+  'receptionist@hotelpos.com',
+  'super@hotelpos.com',
+  'fun_admin@hotelpos.com',
+  'fun_waiter@hotelpos.com',
+  'fun_kasa@hotelpos.com'
+);
+
+INSERT INTO auth.identities (
+  id,
+  user_id,
+  provider_id,
+  identity_data,
+  provider,
+  last_sign_in_at,
+  created_at,
+  updated_at
+)
+SELECT
+  gen_random_uuid(),
+  u.id,
+  u.email,
+  jsonb_build_object(
+    'sub', u.id::text,
+    'email', u.email,
+    'email_verified', true,
+    'phone_verified', false
+  ),
+  'email',
+  NOW(),
+  NOW(),
+  NOW()
+FROM auth.users u
+WHERE u.email IN (
+  'admin@hotelpos.com',
+  'waiter@hotelpos.com',
+  'receptionist@hotelpos.com',
+  'super@hotelpos.com',
+  'fun_admin@hotelpos.com',
+  'fun_waiter@hotelpos.com',
+  'fun_kasa@hotelpos.com'
+)
+AND NOT EXISTS (
+  SELECT 1
+  FROM auth.identities i
+  WHERE i.user_id = u.id
+    AND i.provider = 'email'
+);
+
 -- 3. Link Profiles to Funtasia Tenant (And create if missing)
 INSERT INTO public.profiles (id, tenant_id, full_name, email, role, is_active)
 VALUES 
