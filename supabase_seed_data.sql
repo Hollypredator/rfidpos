@@ -183,11 +183,11 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- 6. Create Demo Guests with active RFID UIDs
-INSERT INTO public.guests (id, room_id, guest_name, card_uid, status)
+INSERT INTO public.guests (id, tenant_id, room_id, guest_name, card_uid, status)
 VALUES 
-  ('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0', 'a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a0a0', 'Can Yılmaz', 'A1B2C3D4', 'active'),
-  ('f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1', 'b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b0b0', 'John Doe', 'B5C6D7E8', 'active'),
-  ('f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'Merve Kaya', 'E5F6G7H8', 'active')
+  ('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0', '11111111-1111-1111-1111-111111111111', 'a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a0a0', 'Can Yılmaz', 'A1B2C3D4', 'active'),
+  ('f1f1f1f1-f1f1-f1f1-f1f1-f1f1f1f1f1f1', '11111111-1111-1111-1111-111111111111', 'b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b0b0', 'John Doe', 'B5C6D7E8', 'active'),
+  ('f2f2f2f2-f2f2-f2f2-f2f2-f2f2f2f2f2f2', '11111111-1111-1111-1111-111111111111', 'd0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0', 'Merve Kaya', 'E5F6G7H8', 'active')
 ON CONFLICT (id) DO NOTHING;
 
 -- ══════════════════════════════════════════════
@@ -299,9 +299,8 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- 6. Create Funtasia Customers (Guests)
-INSERT INTO public.guests (id, room_id, guest_name, card_uid, status)
+INSERT INTO public.guests (id, tenant_id, room_id, guest_name, card_uid, status)
 VALUES 
-  ('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f02011', 'e0e0e0e0-e0e0-e0e0-e0e0-e0e0e0e02011', 'Alp Eren', 'E1E2E3E4', 'active'),
-  ('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f02022', 'e0e0e0e0-e0e0-e0e0-e0e0-e0e0e0e02022', 'Selin Yılmaz', 'D1D2D3D4', 'active')
+  ('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f02011', '99999999-9999-9999-9999-999999999999', 'e0e0e0e0-e0e0-e0e0-e0e0-e0e0e0e02011', 'Alp Eren', 'E1E2E3E4', 'active'),
+  ('f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f02022', '99999999-9999-9999-9999-999999999999', 'e0e0e0e0-e0e0-e0e0-e0e0-e0e0e0e02022', 'Selin Yılmaz', 'D1D2D3D4', 'active')
 ON CONFLICT (id) DO NOTHING;
-

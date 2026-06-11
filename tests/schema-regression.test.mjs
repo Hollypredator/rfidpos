@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 
 const schema = readFileSync(new URL('../supabase/migrations/20260604000000_init.sql', import.meta.url), 'utf8');
 const projectUrl = (path) => new URL(`../${path}`, import.meta.url);
+const rootSeed = readFileSync(projectUrl('supabase_seed_data.sql'), 'utf8');
 
 assert.match(
   schema,
@@ -33,6 +34,12 @@ assert.match(
   schema,
   /CHECK\s*\(\s*type IN \('[^']*charge[\s\S]*deposit[\s\S]*deposit_refund[\s\S]*'\)\s*\)/,
   'transactions.type must accept deposit and deposit_refund records used by reception'
+);
+
+assert.doesNotMatch(
+  rootSeed,
+  /INSERT INTO public\.guests \(id, room_id, guest_name, card_uid, status\)/,
+  'root seed data must include guests.tenant_id when inserting guests'
 );
 
 const hardeningMigrationPath = projectUrl('supabase/migrations/20260611000000_production_hardening.sql');
