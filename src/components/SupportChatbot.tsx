@@ -16,11 +16,6 @@ interface SupportChatbotProps {
 }
 
 export default function SupportChatbot({ tenantId, tenantName, userRole }: SupportChatbotProps) {
-  // Only show for manager & hotel_admin roles
-  if (!['hotel_admin', 'manager'].includes(userRole)) {
-    return null;
-  }
-
   const supabase = createClient();
   const [isOpen, setIsOpen] = useState(false);
   const [tickets, setTickets] = useState<MockSupportTicket[]>([]);
@@ -184,6 +179,11 @@ export default function SupportChatbot({ tenantId, tenantName, userRole }: Suppo
   };
 
   const pendingCount = tickets.filter(t => t.status === 'pending').length;
+
+  // Only show for manager & hotel_admin roles
+  if (!['hotel_admin', 'manager'].includes(userRole)) {
+    return null;
+  }
 
   return (
     <>

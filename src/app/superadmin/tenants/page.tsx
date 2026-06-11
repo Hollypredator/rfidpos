@@ -258,7 +258,7 @@ export default function TenantsPage() {
         { tenant_id: newTenantId, room_number: '103', wallet_balance: 0, pin_code: '0000', status: 'active' }
       ];
 
-      const { data: insertedRooms } = await supabase.from('rooms').insert(defaultRoomsList);
+      const { data: insertedRooms } = await supabase.from('rooms').insert(defaultRoomsList).select();
 
       // 4. Create Default Guests
       if (insertedRooms && Array.isArray(insertedRooms)) {
@@ -268,6 +268,7 @@ export default function TenantsPage() {
         const guestsToInsert = [];
         if (roomA) {
           guestsToInsert.push({ 
+            tenant_id: newTenantId,
             room_id: roomA.id, 
             guest_name: isEntertainment ? 'Alp Eren' : 'Ahmet Yılmaz', 
             card_uid: `UID${Math.random().toString(36).substr(2, 6).toUpperCase()}`, 
@@ -276,6 +277,7 @@ export default function TenantsPage() {
         }
         if (roomB) {
           guestsToInsert.push({ 
+            tenant_id: newTenantId,
             room_id: roomB.id, 
             guest_name: isEntertainment ? 'Selin Yılmaz' : 'Zeynep Kaya', 
             card_uid: `UID${Math.random().toString(36).substr(2, 6).toUpperCase()}`, 

@@ -351,12 +351,12 @@ export default function POSPage() {
         { id: 'room-105', tenant_id: tenantId, room_number: '105', wallet_balance: 120.00, pin_code: '9876', status: 'maintenance' }
       ];
       const sampleGuests: Guest[] = isEntertainment ? [
-        { id: 'guest-201', room_id: 'room-201', guest_name: 'Alp Eren', card_uid: 'E1E2E3E4', status: 'active' },
-        { id: 'guest-202', room_id: 'room-202', guest_name: 'Selin Yılmaz', card_uid: 'D1D2D3D4', status: 'active' }
+        { id: 'guest-201', tenant_id: tenantId, room_id: 'room-201', guest_name: 'Alp Eren', card_uid: 'E1E2E3E4', status: 'active' },
+        { id: 'guest-202', tenant_id: tenantId, room_id: 'room-202', guest_name: 'Selin Yılmaz', card_uid: 'D1D2D3D4', status: 'active' }
       ] : [
-        { id: 'guest-1', room_id: 'room-101', guest_name: 'Can Yılmaz', card_uid: 'A1B2C3D4', status: 'active' },
-        { id: 'guest-2', room_id: 'room-102', guest_name: 'Merve Kaya', card_uid: 'E5F6G7H8', status: 'active' },
-        { id: 'guest-3', room_id: 'room-104', guest_name: 'John Doe', card_uid: '90ABCDEF', status: 'active' }
+        { id: 'guest-1', tenant_id: tenantId, room_id: 'room-101', guest_name: 'Can Yılmaz', card_uid: 'A1B2C3D4', status: 'active' },
+        { id: 'guest-2', tenant_id: tenantId, room_id: 'room-102', guest_name: 'Merve Kaya', card_uid: 'E5F6G7H8', status: 'active' },
+        { id: 'guest-3', tenant_id: tenantId, room_id: 'room-104', guest_name: 'John Doe', card_uid: '90ABCDEF', status: 'active' }
       ];
 
       await OfflineDBService.bulkUpsert('tenants', sampleTenants);
@@ -492,7 +492,7 @@ export default function POSPage() {
 
     try {
       // Find guest and room locally first
-      const guest = await OfflineDBService.getGuestByCardUid(cleanUid);
+      const guest = await OfflineDBService.getGuestByCardUid(cleanUid, tenantId);
       if (!guest) {
         throw new Error(`RFID Kartı ("${cleanUid}") sisteme kayıtlı değil.`);
       }
@@ -1193,7 +1193,7 @@ export default function POSPage() {
                 className="bg-indigo-650/10 hover:bg-indigo-650/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/30 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all active:scale-95"
               >
                 <Layers size={14} />
-                Yerel Test Verisi Yükle (IndexedDB'yi Doldur)
+                Yerel Test Verisi Yükle (IndexedDB&apos;yi Doldur)
               </button>
               
               <button 

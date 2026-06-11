@@ -47,7 +47,7 @@ export default function GuestsPage() {
       const { data: guestsData } = await supabase
         .from('guests')
         .select('*, room:rooms(room_number, wallet_balance, pin_code)')
-        .in('room_id', roomIds)
+        .eq('tenant_id', tenant.id)
         .order('guest_name');
       setGuests(guestsData || []);
     } else {
@@ -113,6 +113,10 @@ export default function GuestsPage() {
   };
 
   const handleSave = async () => {
+    if (!tenant?.id) {
+      setFormError('Tesis bilgisi yuklenemedi.');
+      return;
+    }
     if (!formName || !formCardUid || !formRoomId) {
       setFormError('Tüm alanlar zorunludur.');
       return;
@@ -125,6 +129,18 @@ export default function GuestsPage() {
     setFormError(null);
 
     try {
+      const { data: duplicateGuests, error: duplicateError } = await supabase
+        .from('guests')
+        .select('id')
+        .eq('tenant_id', tenant.id)
+        .eq('card_uid', formCardUid)
+        .eq('status', 'active');
+      if (duplicateError) throw duplicateError;
+      const duplicate = (duplicateGuests || []).find((g: Guest) => g.id !== editingGuest?.id);
+      if (duplicate) {
+        throw new Error(`Bu RFID karti zaten bu ${t.tenantLabel.toLowerCase()} icinde kullanimda.`);
+      }
+
       // 1. Karta atanan odanın şifresini ve durumunu güncelle
       const { error: roomError } = await supabase
         .from('rooms')
@@ -143,7 +159,7 @@ export default function GuestsPage() {
       } else {
         const { error } = await supabase
           .from('guests')
-          .insert({ guest_name: formName, card_uid: formCardUid, room_id: formRoomId, status: formStatus });
+          .insert({ tenant_id: tenant.id, guest_name: formName, card_uid: formCardUid, room_id: formRoomId, status: formStatus });
         if (error) throw error;
         toast({ message: `${t.guestLabel} başarıyla eklendi!`, type: 'success' });
       }

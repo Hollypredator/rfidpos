@@ -25,6 +25,7 @@ export default function UsersPage() {
   // Form states
   const [formName, setFormName] = useState('');
   const [formEmail, setFormEmail] = useState('');
+  const [formPassword, setFormPassword] = useState('');
   const [formRole, setFormRole] = useState<'manager' | 'receptionist' | 'waiter' | 'cashier'>('waiter');
   const [formActive, setFormActive] = useState(true);
   const [formSaving, setFormSaving] = useState(false);
@@ -61,6 +62,7 @@ export default function UsersPage() {
     setEditingUser(null);
     setFormName('');
     setFormEmail('');
+    setFormPassword('demo1234');
     setFormRole('waiter');
     setFormActive(true);
     setFormError(null);
@@ -71,6 +73,7 @@ export default function UsersPage() {
     setEditingUser(profile);
     setFormName(profile.full_name);
     setFormEmail(profile.email);
+    setFormPassword('');
     setFormRole(profile.role as any);
     setFormActive(profile.is_active ?? true);
     setFormError(null);
@@ -88,30 +91,38 @@ export default function UsersPage() {
 
     try {
       if (editingUser) {
-        // Update profile
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            full_name: formName,
-            email: formEmail,
+        const res = await fetch('/api/admin/users', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingUser.id,
+            fullName: formName,
             role: formRole,
-            is_active: formActive
-          })
-          .eq('id', editingUser.id);
-        if (error) throw error;
+            tenantId: tenant.id,
+            isActive: formActive,
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Personel guncellenemedi.');
         toast({ message: 'Personel başarıyla güncellendi!', type: 'success' });
       } else {
-        // Insert new profile (in mock mode, this adds local user, in real supabase it creates db profile)
-        const { error } = await supabase
-          .from('profiles')
-          .insert({
-            tenant_id: tenant.id,
-            full_name: formName,
+        if (!formPassword) {
+          throw new Error('Yeni personel icin sifre zorunludur.');
+        }
+        const res = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fullName: formName,
             email: formEmail,
+            password: formPassword,
             role: formRole,
-            is_active: formActive
-          });
-        if (error) throw error;
+            tenantId: tenant.id,
+            isActive: formActive,
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Personel olusturulamadi.');
         toast({ message: 'Personel başarıyla kaydedildi!', type: 'success' });
       }
       setShowModal(false);
@@ -128,8 +139,13 @@ export default function UsersPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Bu personeli silmek istediğinize emin misiniz?')) return;
     try {
-      const { error } = await supabase.from('profiles').delete().eq('id', id);
-      if (error) throw error;
+      const res = await fetch('/api/admin/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Personel silinemedi.');
       toast({ message: 'Personel silindi.', type: 'warning' });
       fetchUsers();
       window.dispatchEvent(new CustomEvent('rfid-db-updated'));
@@ -298,6 +314,19 @@ export default function UsersPage() {
                   disabled={!!editingUser} // Email change restricted for consistency
                 />
               </div>
+
+              {!editingUser && (
+                <div>
+                  <label className="input-label">Gecici Sifre</label>
+                  <input
+                    className="input"
+                    type="text"
+                    placeholder="Sifre belirleyin..."
+                    value={formPassword}
+                    onChange={(e) => setFormPassword(e.target.value)}
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="input-label">Rol / Yetki Derecesi</label>

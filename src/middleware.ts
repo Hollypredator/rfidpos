@@ -6,6 +6,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 // If Supabase is not configured, skip auth checks entirely (design/dev mode)
 const isSupabaseConfigured = supabaseUrl && !supabaseUrl.includes('placeholder');
+const allowMockBypass = process.env.NODE_ENV !== 'production' && !isSupabaseConfigured;
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
@@ -19,8 +20,15 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── DEV MODE: No Supabase → allow all routes ──
-  if (!isSupabaseConfigured) {
+  if (allowMockBypass) {
     return NextResponse.next();
+  }
+
+  if (!isSupabaseConfigured) {
+    return NextResponse.json(
+      { error: 'Supabase environment variables are required in production.' },
+      { status: 500 }
+    );
   }
 
   // ── PRODUCTION MODE: Full auth checks ──

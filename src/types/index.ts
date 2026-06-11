@@ -68,6 +68,7 @@ export interface Room {
 // ── Guest (Misafir — RFID kart sahibi) ──────────
 export interface Guest {
   id: string;
+  tenant_id: string;
   room_id: string;
   guest_name: string;
   card_uid: string;

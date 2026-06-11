@@ -379,7 +379,7 @@ export default function SuperadminSettingsPage() {
                     placeholder="Virgülle ayırın, örn: 192.168.1.1, 85.105.x.x"
                   />
                   <span style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4, display: 'block' }}>
-                    Sadece belirtilen IP adreslerinden superadmin paneline erişime izin verilir. Boş bırakılırsa tüm IP'lere izin verilir.
+                    Sadece belirtilen IP adreslerinden superadmin paneline erişime izin verilir. Boş bırakılırsa tüm IP&apos;lere izin verilir.
                   </span>
                 </div>
               </div>

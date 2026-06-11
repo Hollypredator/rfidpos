@@ -115,6 +115,7 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
       const { data: guestsData, error: guestError } = await supabase
         .from('guests')
         .select('*')
+        .eq('tenant_id', tenant?.id)
         .eq('card_uid', uid);
 
       if (guestError) throw guestError;

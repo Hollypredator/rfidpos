@@ -50,7 +50,7 @@ export function useSync(tenantId: string | null) {
         const { data: guests, error: guestsErr } = await supabase
           .from('guests')
           .select('*')
-          .in('room_id', roomIds);
+          .eq('tenant_id', activeTenantId);
         if (guestsErr) throw guestsErr;
         if (guests) await OfflineDBService.bulkUpsert('guests', guests);
       }

@@ -1,7 +1,7 @@
 import { Tenant, Room, Guest, Transaction, SyncQueueItem } from '../types';
 
 const DB_NAME = 'HotelRFIDWalletDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export class OfflineDBService {
   private static db: IDBDatabase | null = null;
@@ -41,8 +41,25 @@ export class OfflineDBService {
 
         if (!db.objectStoreNames.contains('guests')) {
           const guestStore = db.createObjectStore('guests', { keyPath: 'id' });
+          guestStore.createIndex('tenant_id', 'tenant_id', { unique: false });
           guestStore.createIndex('room_id', 'room_id', { unique: false });
-          guestStore.createIndex('card_uid', 'card_uid', { unique: true });
+          guestStore.createIndex('card_uid', 'card_uid', { unique: false });
+          guestStore.createIndex('tenant_card_uid', ['tenant_id', 'card_uid'], { unique: true });
+        } else {
+          const transaction = (event.target as IDBOpenDBRequest).transaction;
+          const guestStore = transaction?.objectStore('guests');
+          if (guestStore) {
+            if (!guestStore.indexNames.contains('tenant_id')) {
+              guestStore.createIndex('tenant_id', 'tenant_id', { unique: false });
+            }
+            if (guestStore.indexNames.contains('card_uid')) {
+              guestStore.deleteIndex('card_uid');
+            }
+            guestStore.createIndex('card_uid', 'card_uid', { unique: false });
+            if (!guestStore.indexNames.contains('tenant_card_uid')) {
+              guestStore.createIndex('tenant_card_uid', ['tenant_id', 'card_uid'], { unique: true });
+            }
+          }
         }
 
         if (!db.objectStoreNames.contains('transactions')) {
@@ -127,13 +144,13 @@ export class OfflineDBService {
 
   // --- SPECIFIC RFID LOOKUPS ---
 
-  public static async getGuestByCardUid(cardUid: string): Promise<Guest | null> {
+  public static async getGuestByCardUid(cardUid: string, tenantId: string): Promise<Guest | null> {
     const db = await this.getDB();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction('guests', 'readonly');
       const store = transaction.objectStore('guests');
-      const index = store.index('card_uid');
-      const request = index.get(cardUid);
+      const index = store.index('tenant_card_uid');
+      const request = index.get([tenantId, cardUid]);
 
       request.onsuccess = () => resolve(request.result || null);
       request.onerror = () => reject(request.error);
@@ -172,8 +189,8 @@ export class OfflineDBService {
       const queueStore = tx.objectStore('sync_queue');
       const tenantsStore = tx.objectStore('tenants');
 
-      const cardIndex = guestsStore.index('card_uid');
-      const guestRequest = cardIndex.get(params.cardUid);
+      const cardIndex = guestsStore.index('tenant_card_uid');
+      const guestRequest = cardIndex.get([params.tenantId, params.cardUid]);
 
       guestRequest.onerror = () => reject(new Error('Failed to search card UID in database.'));
       

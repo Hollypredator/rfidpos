@@ -3,10 +3,16 @@ import { getMockDb, setTableData, getTableData, saveMockDb, MockSchema } from '.
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder-url.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+const hasSupabaseConfig = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+  !process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('placeholder') &&
+  Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== 'placeholder-anon-key';
 
-export const isMockMode = !process.env.NEXT_PUBLIC_SUPABASE_URL || 
-  process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder') ||
-  process.env.NEXT_PUBLIC_SUPABASE_URL === '';
+if (process.env.NODE_ENV === 'production' && !hasSupabaseConfig) {
+  throw new Error('Supabase environment variables are required in production.');
+}
+
+export const isMockMode = !hasSupabaseConfig && process.env.NODE_ENV !== 'production';
 
 // Production güvenlik uyarısı — mock mode'da veri kaybı riski var
 if (typeof window !== 'undefined' && isMockMode) {
@@ -56,6 +62,7 @@ class MockSupabaseQuery {
   limitNum?: number;
   operation: 'select' | 'insert' | 'update' | 'delete' = 'select';
   payload: any = null;
+  shouldReturnRows = false;
 
   constructor(table: string) {
     this.table = table;
@@ -64,7 +71,11 @@ class MockSupabaseQuery {
   select(query = '*', options?: any) {
     this.selectQuery = query;
     this.selectOptions = options;
-    this.operation = 'select';
+    if (this.operation === 'insert' || this.operation === 'update') {
+      this.shouldReturnRows = true;
+    } else {
+      this.operation = 'select';
+    }
     return this;
   }
 
@@ -187,7 +198,7 @@ class MockSupabaseQuery {
         }
       }
 
-      return { data: Array.isArray(this.payload) ? newRecords : newRecords[0], error: null };
+      return { data: (Array.isArray(this.payload) || this.shouldReturnRows) ? newRecords : newRecords[0], error: null };
     }
 
     if (this.operation === 'update') {

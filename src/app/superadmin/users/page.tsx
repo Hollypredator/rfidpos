@@ -103,37 +103,38 @@ export default function SuperadminUsersPage() {
       const selectedTenantId = (formRole === 'super_admin' || formRole === 'platform_owner') ? null : formTenantId;
 
       if (editingUser) {
-        // Edit existing profile
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            full_name: formName,
-            email: formEmail,
+        const res = await fetch('/api/admin/users', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editingUser.id,
+            fullName: formName,
             role: formRole,
-            tenant_id: selectedTenantId,
-            is_active: formActive
-          })
-          .eq('id', editingUser.id);
-
-        if (error) throw error;
+            tenantId: selectedTenantId,
+            isActive: formActive,
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Kullanici guncellenemedi.');
         toast({ message: 'Kullanıcı başarıyla güncellendi!', type: 'success' });
       } else {
-        // Create new user profile
-        // Note: In mock mode, this will also create the credentials locally.
-        // In real mode, it writes directly to profiles (in a real production flow, admin triggers Edge Function to create Auth user).
-        const newUserId = `mock-user-${Math.random().toString(36).substr(2, 9)}`;
-        const { error } = await supabase
-          .from('profiles')
-          .insert({
-            id: newUserId,
-            tenant_id: selectedTenantId,
-            full_name: formName,
+        if (!formPassword) {
+          throw new Error('Yeni kullanici icin sifre zorunludur.');
+        }
+        const res = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fullName: formName,
             email: formEmail,
+            password: formPassword,
             role: formRole,
-            is_active: formActive
-          });
-
-        if (error) throw error;
+            tenantId: selectedTenantId,
+            isActive: formActive,
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Kullanici olusturulamadi.');
         toast({ message: 'Yeni kullanıcı başarıyla eklendi!', type: 'success' });
       }
 
@@ -151,8 +152,13 @@ export default function SuperadminUsersPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Bu kullanıcıyı sistemden tamamen silmek istediğinize emin misiniz?')) return;
     try {
-      const { error } = await supabase.from('profiles').delete().eq('id', id);
-      if (error) throw error;
+      const res = await fetch('/api/admin/users', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Kullanici silinemedi.');
       toast({ message: 'Kullanıcı sistemden silindi.', type: 'warning' });
       fetchUsersAndTenants();
       window.dispatchEvent(new CustomEvent('rfid-db-updated'));

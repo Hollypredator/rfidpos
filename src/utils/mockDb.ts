@@ -175,11 +175,11 @@ const DEFAULT_DATA: MockSchema = {
     { id: 'room-203', tenant_id: 'mock-tenant-funtasia', room_number: '203', wallet_balance: 0, pin_code: '0000', status: 'active', daily_limit: 0, created_at: new Date().toISOString() },
   ],
   guests: [
-    { id: 'guest-1', room_id: 'room-101', guest_name: 'Can Yılmaz', card_uid: 'A1B2C3D4', status: 'active', created_at: new Date().toISOString() },
-    { id: 'guest-2', room_id: 'room-102', guest_name: 'Merve Kaya', card_uid: 'E5F6G7H8', status: 'active', created_at: new Date().toISOString() },
-    { id: 'guest-3', room_id: 'room-104', guest_name: 'John Doe', card_uid: '90ABCDEF', status: 'active', created_at: new Date().toISOString() },
-    { id: 'guest-201', room_id: 'room-201', guest_name: 'Alp Eren', card_uid: 'E1E2E3E4', status: 'active', created_at: new Date().toISOString() },
-    { id: 'guest-202', room_id: 'room-202', guest_name: 'Selin Yılmaz', card_uid: 'D1D2D3D4', status: 'active', created_at: new Date().toISOString() },
+    { id: 'guest-1', tenant_id: DEFAULT_TENANT_ID, room_id: 'room-101', guest_name: 'Can Yılmaz', card_uid: 'A1B2C3D4', status: 'active', created_at: new Date().toISOString() },
+    { id: 'guest-2', tenant_id: DEFAULT_TENANT_ID, room_id: 'room-102', guest_name: 'Merve Kaya', card_uid: 'E5F6G7H8', status: 'active', created_at: new Date().toISOString() },
+    { id: 'guest-3', tenant_id: DEFAULT_TENANT_ID, room_id: 'room-104', guest_name: 'John Doe', card_uid: '90ABCDEF', status: 'active', created_at: new Date().toISOString() },
+    { id: 'guest-201', tenant_id: 'mock-tenant-funtasia', room_id: 'room-201', guest_name: 'Alp Eren', card_uid: 'E1E2E3E4', status: 'active', created_at: new Date().toISOString() },
+    { id: 'guest-202', tenant_id: 'mock-tenant-funtasia', room_id: 'room-202', guest_name: 'Selin Yılmaz', card_uid: 'D1D2D3D4', status: 'active', created_at: new Date().toISOString() },
   ],
   transactions: [
     {

@@ -82,11 +82,13 @@ CREATE TABLE IF NOT EXISTS rooms (
 -- ══════════════════════════════════════════════
 CREATE TABLE IF NOT EXISTS guests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     room_id UUID NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
     guest_name VARCHAR(255) NOT NULL,
-    card_uid VARCHAR(100) UNIQUE NOT NULL,
+    card_uid VARCHAR(100) NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT unique_tenant_card_uid UNIQUE(tenant_id, card_uid)
 );
 
 -- ══════════════════════════════════════════════
@@ -99,7 +101,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     guest_id UUID REFERENCES guests(id) ON DELETE SET NULL,
     location_id UUID REFERENCES locations(id) ON DELETE SET NULL,
     amount NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
-    type VARCHAR(20) NOT NULL CHECK (type IN ('charge', 'refund', 'topup')),
+    type VARCHAR(20) NOT NULL CHECK (type IN ('charge', 'refund', 'topup', 'deposit', 'deposit_refund')),
     location VARCHAR(50) NOT NULL DEFAULT 'reception',
     description TEXT,
     performed_by UUID REFERENCES auth.users(id),
@@ -145,6 +147,7 @@ CREATE INDEX IF NOT EXISTS idx_profiles_tenant ON profiles(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role);
 CREATE INDEX IF NOT EXISTS idx_locations_tenant ON locations(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_rooms_tenant ON rooms(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_guests_tenant ON guests(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_guests_room ON guests(room_id);
 CREATE INDEX IF NOT EXISTS idx_guests_card_uid ON guests(card_uid);
 CREATE INDEX IF NOT EXISTS idx_transactions_tenant ON transactions(tenant_id);
@@ -272,7 +275,7 @@ CREATE POLICY "rooms_all" ON rooms FOR ALL USING (
 -- GUESTS policies
 DROP POLICY IF EXISTS "guests_all" ON guests;
 CREATE POLICY "guests_all" ON guests FOR ALL USING (
-    room_id IN (SELECT id FROM rooms WHERE tenant_id = get_user_tenant_id())
+    tenant_id = get_user_tenant_id()
     OR get_user_role() IN ('super_admin', 'platform_owner')
 );
 
@@ -309,6 +312,21 @@ CREATE POLICY "audit_logs_insert" ON audit_logs FOR INSERT WITH CHECK (true);
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS subscription_plan VARCHAR(50) DEFAULT 'none';
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMPTZ DEFAULT NOW() - INTERVAL '1 second';
 ALTER TABLE tenants ALTER COLUMN status SET DEFAULT 'inactive';
+
+ALTER TABLE guests ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE;
+UPDATE guests
+SET tenant_id = rooms.tenant_id
+FROM rooms
+WHERE guests.room_id = rooms.id
+  AND guests.tenant_id IS NULL;
+ALTER TABLE guests DROP CONSTRAINT IF EXISTS guests_card_uid_key;
+ALTER TABLE guests DROP CONSTRAINT IF EXISTS unique_tenant_card_uid;
+ALTER TABLE guests ADD CONSTRAINT unique_tenant_card_uid UNIQUE(tenant_id, card_uid);
+ALTER TABLE guests ALTER COLUMN tenant_id SET NOT NULL;
+
+ALTER TABLE transactions DROP CONSTRAINT IF EXISTS transactions_type_check;
+ALTER TABLE transactions ADD CONSTRAINT transactions_type_check
+    CHECK (type IN ('charge', 'refund', 'topup', 'deposit', 'deposit_refund'));
 
 -- ══════════════════════════════════════════════
 -- 9. TICKETS (Destek Talepleri)

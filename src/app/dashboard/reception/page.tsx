@@ -245,8 +245,10 @@ function ReceptionPageContent() {
       const { data: existingGuest, error: existingError } = await supabase
         .from('guests')
         .select('*')
+        .eq('tenant_id', tenant.id)
         .eq('card_uid', cardUid.trim())
         .eq('status', 'active');
+      if (existingError) throw existingError;
 
       if (existingGuest && existingGuest.length > 0) {
         throw new Error(`Bu RFID kartı zaten başka bir misafire tanımlı!`);
@@ -267,6 +269,7 @@ function ReceptionPageContent() {
       const { data: guestData, error: guestError } = await supabase
         .from('guests')
         .insert({
+          tenant_id: tenant.id,
           room_id: selectedRoomId,
           guest_name: guestName.trim(),
           card_uid: cardUid.trim(),

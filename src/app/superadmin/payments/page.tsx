@@ -393,7 +393,7 @@ export default function PaymentsLedgerPage() {
               </div>
 
               <div>
-                <label className="input-label">Havale Açıklaması / Referans Kodu (Varsayılan İşletme ID'si)</label>
+                <label className="input-label">Havale Açıklaması / Referans Kodu (Varsayılan İşletme ID&apos;si)</label>
                 <input className="input" placeholder={selectedTenantId} value={refCode} onChange={(e) => setRefCode(e.target.value)} />
               </div>
             </div>
