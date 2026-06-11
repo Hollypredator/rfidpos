@@ -49,6 +49,7 @@ export default function PaymentsLedgerPage() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleApprove = async (payment: MockPayment) => {

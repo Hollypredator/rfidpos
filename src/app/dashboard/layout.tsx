@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
@@ -80,6 +81,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       }
     }
     return false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getDefaultPath = React.useCallback((userRole: string): string => {
@@ -124,6 +126,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (tenant?.id) {
       loadSimulatorGuests();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant?.id]);
 
   // Global Keyboard Wedge RFID listener
@@ -172,6 +175,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => {
       window.removeEventListener('rfid-db-updated', handleDbUpdate);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant?.id]);
 
   // Android Javascript Bridge Listener for Dashboard card lookup
@@ -260,12 +264,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           borderBottom: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', gap: 10,
         }}>
-          <img 
-            src="/logo.png" 
-            alt="RFID POS Logo" 
-            style={{ 
-              width: 36, 
-              height: 36, 
+          <Image
+            src="/logo.png"
+            alt="RFID POS Logo"
+            width={36}
+            height={36}
+            style={{
               borderRadius: 10, 
               objectFit: 'contain',
               flexShrink: 0 

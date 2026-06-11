@@ -119,6 +119,7 @@ function ReceptionPageContent() {
     return () => {
       window.removeEventListener('rfid-db-updated', handleDbUpdate);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant?.id]);
 
   // Set deposit amount from tenant settings
@@ -158,6 +159,7 @@ function ReceptionPageContent() {
       setCheckoutRoom(null);
       setCheckoutTransactions([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCheckoutRoomId]);
 
   const fetchCheckoutRoomData = async (roomId: string) => {

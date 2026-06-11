@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { CreditCard, Building2, User, Mail, Lock, Loader2, CheckCircle } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -133,12 +134,12 @@ export default function RegisterPage() {
       <div className="auth-card">
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <img 
-            src="/logo.png" 
-            alt="RFID POS Logo" 
-            style={{ 
-              width: 80, 
-              height: 80, 
+          <Image
+            src="/logo.png"
+            alt="RFID POS Logo"
+            width={80}
+            height={80}
+            style={{
               borderRadius: 16, 
               objectFit: 'contain',
               marginBottom: 16,

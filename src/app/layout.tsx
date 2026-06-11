@@ -1,10 +1,16 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import { AuthProvider } from "../contexts/AuthContext";
 import { ThemeProvider } from "../contexts/ThemeContext";
 import { ToastProvider } from "../contexts/ToastContext";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import NfcStatusBanner from "../components/NfcStatusBanner";
 import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "RFID POS — Otel Kapalı Devre Ödeme Sistemi",
@@ -28,16 +34,11 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
-          rel="stylesheet"
-        />
         <link rel="icon" href="/favicon.png" type="image/png" />
         <link rel="apple-touch-icon" href="/favicon.png" />
       </head>
       <body
-        className="antialiased"
-        style={{ fontFamily: "'Inter', sans-serif" }}
+        className={`${inter.className} antialiased`}
       >
         <ErrorBoundary>
           <ThemeProvider>

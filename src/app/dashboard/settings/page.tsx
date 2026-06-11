@@ -59,6 +59,7 @@ export default function SettingsPage() {
       fetchLocations();
       fetchDevices();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant]);
 
   const fetchLocations = async () => {

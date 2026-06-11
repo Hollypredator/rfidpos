@@ -97,6 +97,7 @@ export default function RfidLookupModal({ cardUid, onClose, onRefreshStats }: Rf
     } else {
       setIsOpen(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardUid]);
 
   const fetchCardDetails = async (uid: string) => {

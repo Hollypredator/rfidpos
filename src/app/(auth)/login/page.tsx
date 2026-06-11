@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, Suspense } from 'react';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CreditCard, Eye, EyeOff, LogIn, Loader2 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -73,12 +74,12 @@ function LoginContent() {
       <div className="auth-card">
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <img 
-            src="/logo.png" 
-            alt="RFID POS Logo" 
-            style={{ 
-              width: 80, 
-              height: 80, 
+          <Image
+            src="/logo.png"
+            alt="RFID POS Logo"
+            width={80}
+            height={80}
+            style={{
               borderRadius: 16, 
               objectFit: 'contain',
               marginBottom: 16,
@@ -266,4 +267,3 @@ export default function LoginPage() {
     </Suspense>
   );
 }
-

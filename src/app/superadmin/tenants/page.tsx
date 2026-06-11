@@ -89,7 +89,10 @@ export default function TenantsPage() {
     setIsLoading(false);
   };
 
-  useEffect(() => { fetchTenants(); }, []);
+  useEffect(() => {
+    fetchTenants();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleOpenDetails = async (tenant: Tenant) => {
     setSelectedTenant(tenant);

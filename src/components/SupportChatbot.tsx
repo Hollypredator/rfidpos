@@ -72,6 +72,7 @@ export default function SupportChatbot({ tenantId, tenantName, userRole }: Suppo
     if (isOpen) {
       fetchData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, tenantId]);
 
   const handleOpenDetail = (ticket: MockSupportTicket) => {

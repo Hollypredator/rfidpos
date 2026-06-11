@@ -104,6 +104,7 @@ export default function DashboardPage() {
     return () => {
       window.removeEventListener('rfid-db-updated', handleUpdate);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant?.id]);
 
   const txTypeLabel = (type: string) => {

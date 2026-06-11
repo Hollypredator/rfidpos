@@ -66,6 +66,7 @@ export default function GuestsPage() {
     return () => {
       window.removeEventListener('rfid-db-updated', handleUpdate);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant?.id]);
 
   useEffect(() => {

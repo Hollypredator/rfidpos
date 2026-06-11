@@ -58,6 +58,7 @@ export default function TransactionsPage() {
     return () => {
       window.removeEventListener('rfid-db-updated', handleUpdate);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant?.id, filterType, filterDate]);
 
   const txTypeInfo = (type: string) => {

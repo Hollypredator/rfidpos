@@ -119,6 +119,7 @@ export default function POSPage() {
 
   useEffect(() => {
     fetchStaffList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId]);
 
   const handleSignOut = async () => {
@@ -306,6 +307,7 @@ export default function POSPage() {
     return () => {
       delete (window as any).handleRFIDCard;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isNfcModalOpen, paymentStatus]);
 
   const isExpired = tenant?.subscription_expires_at ? new Date(tenant.subscription_expires_at) < new Date() : false;

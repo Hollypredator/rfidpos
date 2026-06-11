@@ -53,6 +53,7 @@ export default function RoomsPage() {
     return () => {
       window.removeEventListener('rfid-db-updated', handleUpdate);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant?.id]);
 
   const openAddModal = () => {

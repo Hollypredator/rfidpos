@@ -58,6 +58,7 @@ export default function SuperadminUsersPage() {
 
   useEffect(() => {
     fetchUsersAndTenants();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openAddModal = () => {
