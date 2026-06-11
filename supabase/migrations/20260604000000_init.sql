@@ -91,6 +91,13 @@ CREATE TABLE IF NOT EXISTS guests (
     CONSTRAINT unique_tenant_card_uid UNIQUE(tenant_id, card_uid)
 );
 
+ALTER TABLE guests ADD COLUMN IF NOT EXISTS tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE;
+UPDATE guests
+SET tenant_id = rooms.tenant_id
+FROM rooms
+WHERE guests.room_id = rooms.id
+  AND guests.tenant_id IS NULL;
+
 -- ══════════════════════════════════════════════
 -- 6. TRANSACTIONS (İşlem logları)
 -- ══════════════════════════════════════════════

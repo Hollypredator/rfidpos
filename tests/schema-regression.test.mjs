@@ -22,6 +22,13 @@ assert.match(
   'card_uid uniqueness must be scoped by tenant_id'
 );
 
+const initGuestTenantCompatIndex = schema.indexOf('ALTER TABLE guests ADD COLUMN IF NOT EXISTS tenant_id');
+const initGuestTenantIndexIndex = schema.indexOf('CREATE INDEX IF NOT EXISTS idx_guests_tenant ON guests(tenant_id)');
+assert.ok(
+  initGuestTenantCompatIndex !== -1 && initGuestTenantCompatIndex < initGuestTenantIndexIndex,
+  'init migration must add guests.tenant_id before creating tenant_id indexes or policies on existing databases'
+);
+
 assert.match(
   schema,
   /CHECK\s*\(\s*type IN \('[^']*charge[\s\S]*deposit[\s\S]*deposit_refund[\s\S]*'\)\s*\)/,
